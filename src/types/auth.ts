@@ -17,3 +17,11 @@ export type LoginResponse = {
   accessToken: string;
   user: User;
 };
+
+export type SignupRequest = {
+  email: string;
+  password: string;
+  name: string;
+};
+
+export type SignupResponse = LoginResponse;

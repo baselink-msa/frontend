@@ -1,5 +1,5 @@
 import type { AdminFaqRequest, AdminGameRequest, AdminGameSeatsRequest, AdminMenuRequest, AdminSeatRequest, AdminSeatSectionRequest, WaitingRoomPolicyRequest } from '../types/admin';
-import type { LoginRequest, LoginResponse, User } from '../types/auth';
+import type { LoginRequest, LoginResponse, SignupRequest, SignupResponse, User } from '../types/auth';
 import type { ChatbotAnswer, ChatbotRequest, Faq } from '../types/chatbot';
 import type { ApiResponse } from '../types/common';
 import type { GameDetail, GameSummary, SeatSection } from '../types/game';
@@ -22,6 +22,8 @@ const reservations = new Map<number, ReservationDetail>();
 const myTickets: MyTicket[] = [];
 let reservationSequence = 10;
 let orderSequence = 20;
+let userSequence = 3;
+const registeredUsers = new Map<string, { user: User; password: string }>();
 
 const getSeats = (gameId: number) => {
   if (!seatsByGame.has(gameId)) seatsByGame.set(gameId, createMockSeats(gameId));
@@ -32,14 +34,43 @@ export const mockApi = {
   auth: {
     login: async (request: LoginRequest): Promise<ApiResponse<LoginResponse>> => {
       await delay();
-      const user = request.email === 'admin@example.com' ? mockAdmin : mockUser;
-      if (request.password !== 'password1234') {
+      const registeredUser = registeredUsers.get(request.email);
+      const user =
+        registeredUser?.user ?? (request.email === 'admin@example.com' ? mockAdmin : mockUser);
+      const expectedPassword = registeredUser?.password ?? 'password1234';
+      if (request.password !== expectedPassword) {
         throw new Error('이메일 또는 비밀번호가 올바르지 않습니다.');
       }
       return {
         success: true,
         data: { accessToken: `mock-access-token-${user.role.toLowerCase()}`, user },
         message: '로그인 성공',
+      };
+    },
+    signup: async (request: SignupRequest): Promise<ApiResponse<SignupResponse>> => {
+      await delay();
+      if (request.password.length < 8) {
+        throw new Error('비밀번호는 8자 이상이어야 합니다.');
+      }
+      if (
+        request.email === mockUser.email ||
+        request.email === mockAdmin.email ||
+        registeredUsers.has(request.email)
+      ) {
+        throw new Error('이미 가입된 이메일입니다.');
+      }
+      const user: User = {
+        userId: userSequence++,
+        email: request.email,
+        name: request.name,
+        role: 'USER',
+        status: 'ACTIVE',
+      };
+      registeredUsers.set(request.email, { user, password: request.password });
+      return {
+        success: true,
+        data: { accessToken: `mock-access-token-user-${user.userId}`, user },
+        message: '회원가입 성공',
       };
     },
     me: (): Promise<ApiResponse<User>> => ok(mockUser),

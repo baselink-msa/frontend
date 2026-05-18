@@ -10,6 +10,7 @@ import { MyTicketsPage } from './pages/MyTicketsPage';
 import { OrderPage } from './pages/OrderPage';
 import { ReservationResultPage } from './pages/ReservationResultPage';
 import { SeatSelectionPage } from './pages/SeatSelectionPage';
+import { SignupPage } from './pages/SignupPage';
 import { WaitingRoomPage } from './pages/WaitingRoomPage';
 
 export function App() {
@@ -18,6 +19,7 @@ export function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route path="/games" element={<GameListPage />} />
         <Route path="/games/:gameId" element={<GameDetailPage />} />
         <Route path="/games/:gameId/waiting-room" element={<WaitingRoomPage />} />

@@ -56,6 +56,7 @@ JWT는 로그인 성공 후 `accessToken`을 localStorage에 저장하고, Axios
 ## 라우팅
 
 - `/`: 메인 페이지
+- `/signup`: 회원가입
 - `/games`: 경기 목록
 - `/login`: 로그인
 - `/games/:gameId`: 경기 상세
