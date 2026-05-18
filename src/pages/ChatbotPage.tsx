@@ -1,0 +1,83 @@
+import { FormEvent, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { chatbotApi } from '../api/chatbotApi';
+import { ChatMessage } from '../components/chatbot/ChatMessage';
+import { ErrorMessage } from '../components/common/ErrorMessage';
+import type { ChatMessage as ChatMessageType } from '../types/chatbot';
+
+export function ChatbotPage() {
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<ChatMessageType[]>([
+    { id: 'hello', role: 'assistant', text: '야구 용어와 예매 흐름을 물어보세요.', source: 'FAQ', cached: true },
+  ]);
+  const [error, setError] = useState('');
+  const faqsQuery = useQuery({ queryKey: ['faqs'], queryFn: chatbotApi.getFaqs });
+
+  const sendMutation = useMutation({
+    mutationFn: chatbotApi.sendMessage,
+    onSuccess: (response) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          text: response.data.answer,
+          source: response.data.source,
+          cached: response.data.cached,
+        },
+      ]);
+      setError('');
+    },
+    onError: (err) => setError(err.message || '챗봇 응답에 실패했습니다.'),
+  });
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    if (!message.trim()) return;
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', text: message }]);
+    sendMutation.mutate({ message });
+    setMessage('');
+  };
+
+  return (
+    <section className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="rounded-lg border border-slate-200 bg-slate-100 p-5">
+        <h1 className="text-3xl font-bold text-slate-950">FAQ 챗봇</h1>
+        <div className="mt-5">
+          <ErrorMessage message={error} />
+        </div>
+        <div className="mt-5 flex h-[520px] flex-col gap-4 overflow-y-auto rounded-lg bg-slate-50 p-4">
+          {messages.map((item) => (
+            <ChatMessage key={item.id} message={item} />
+          ))}
+        </div>
+        <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
+          <input
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            placeholder="병살타가 뭐야?"
+            className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3"
+          />
+          <button className="rounded-md bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">
+            전송
+          </button>
+        </form>
+      </div>
+      <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
+        <h2 className="text-lg font-bold text-slate-950">등록 FAQ</h2>
+        <div className="mt-4 space-y-3">
+          {faqsQuery.data?.data.map((faq) => (
+            <button
+              type="button"
+              key={faq.faqId}
+              onClick={() => setMessage(faq.question)}
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              {faq.question}
+            </button>
+          ))}
+        </div>
+      </aside>
+    </section>
+  );
+}

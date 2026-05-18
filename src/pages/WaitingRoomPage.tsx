@@ -1,0 +1,85 @@
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useNavigate, useParams } from 'react-router-dom';
+import { waitingRoomApi } from '../api/waitingRoomApi';
+import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Loading } from '../components/common/Loading';
+import { StatusBadge } from '../components/common/StatusBadge';
+import { useReservationStore } from '../store/reservationStore';
+import { formatSeconds } from '../utils/date';
+
+export function WaitingRoomPage() {
+  const { gameId = '0' } = useParams();
+  const numericGameId = Number(gameId);
+  const navigate = useNavigate();
+  const setTicketAccessToken = useReservationStore((state) => state.setTicketAccessToken);
+  const [error, setError] = useState('');
+
+  const statusQuery = useQuery({
+    queryKey: ['waiting-room', numericGameId],
+    queryFn: () => waitingRoomApi.status(numericGameId),
+    refetchInterval: (query) => {
+      const state = query.state.data?.data;
+      return state?.canEnter || state?.status === 'ALLOWED' ? false : 3000;
+    },
+    enabled: Boolean(numericGameId),
+  });
+
+  const issueTokenMutation = useMutation({
+    mutationFn: () => waitingRoomApi.issueToken(numericGameId),
+    onSuccess: (response) => {
+      setTicketAccessToken(response.data.ticketAccessToken);
+      navigate(`/games/${numericGameId}/seats`);
+    },
+    onError: (err) => setError(err.message || '대기열 토큰 발급에 실패했습니다.'),
+  });
+
+  const waitingState = statusQuery.data?.data;
+
+  useEffect(() => {
+    if (!waitingState || issueTokenMutation.isPending || issueTokenMutation.isSuccess) return;
+    if (waitingState.canEnter || waitingState.status === 'ALLOWED') {
+      issueTokenMutation.mutate();
+    }
+  }, [waitingState, issueTokenMutation]);
+
+  if (statusQuery.isLoading) return <Loading label="대기열 상태를 확인하는 중입니다." />;
+
+  const progress = waitingState ? Math.round(((300 - waitingState.position) / 300) * 100) : 0;
+
+  return (
+    <section className="mx-auto max-w-3xl rounded-lg border border-slate-200 bg-white p-8 shadow-soft">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-bold text-blue-700">Waiting Room</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">대기열 상태</h1>
+        </div>
+        <StatusBadge status={waitingState?.status ?? 'WAITING'} />
+      </div>
+      <ErrorMessage message={error || statusQuery.error?.message} />
+      <div className="mt-8 text-center">
+        <p className="text-sm font-semibold text-slate-500">현재 내 순번</p>
+        <p className="mt-2 text-7xl font-black text-blue-700">{waitingState?.position ?? '-'}</p>
+      </div>
+      <div className="mt-8 h-3 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-full rounded-full bg-blue-700 transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      <dl className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Info label="현재 내 앞 대기 인원" value={`${waitingState?.peopleAhead ?? 0}명`} />
+        <Info label="예상 대기 시간" value={formatSeconds(waitingState?.estimatedWaitSeconds ?? 0)} />
+      </dl>
+      <p className="mt-8 rounded-lg bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-800">
+        입장 가능 시 자동으로 좌석 선택 화면으로 이동합니다.
+      </p>
+    </section>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 p-4 text-center">
+      <dt className="text-sm text-slate-500">{label}</dt>
+      <dd className="mt-1 text-xl font-bold text-slate-950">{value}</dd>
+    </div>
+  );
+}
