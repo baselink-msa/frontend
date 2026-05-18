@@ -17,8 +17,8 @@ npm run build
 `.env.example`을 기준으로 `.env`를 만들면 됩니다.
 
 ```bash
-VITE_API_BASE_URL=https://example.com/api
-VITE_USE_MOCK=true
+VITE_API_BASE_URL=/api
+VITE_USE_MOCK=false
 ```
 
 ## Mock API 사용
@@ -38,11 +38,48 @@ VITE_USE_MOCK=true
 예시:
 
 ```bash
-VITE_API_BASE_URL=https://api.example.com/api
+VITE_API_BASE_URL=/api
 VITE_USE_MOCK=false
 ```
 
 JWT는 로그인 성공 후 `accessToken`을 localStorage에 저장하고, Axios interceptor에서 `Authorization: Bearer {accessToken}` 헤더를 자동으로 붙입니다.
+로그인된 사용자의 `userId`는 대기열/좌석잠금/예매 서비스 연동을 위해 `X-User-Id` 헤더로 함께 전송합니다.
+
+로컬 개발 서버에서는 `vite.config.ts`의 proxy가 `/api/...` 요청을 백엔드 MSA 포트로 나눠 보냅니다.
+
+| API | 로컬 백엔드 |
+| --- | --- |
+| `/api/auth` | `http://localhost:8081` |
+| `/api/games` | `http://localhost:8082` |
+| `/api/admin` | `http://localhost:8083` |
+| `/api/waiting-room` | `http://localhost:8084` |
+| `/api/chatbot` | `http://localhost:8000` |
+| `/api/orders` | `http://localhost:8001` |
+| `/api/seats/locks` | `http://localhost:8086` |
+| `/api/tickets` | `http://localhost:8087` |
+
+백엔드 레포를 같은 상위 폴더에 받은 경우:
+
+```bash
+cd ../baselink-backend
+docker compose up -d
+./gradlew :auth-service:bootRun
+./gradlew :game-service:bootRun
+./gradlew :admin-service:bootRun
+./gradlew :waiting-room-service:bootRun
+./gradlew :seat-lock-service:bootRun
+./gradlew :ticket-service:bootRun
+```
+
+주문/챗봇 서비스까지 확인하려면 백엔드 레포에서 별도 터미널로 실행합니다.
+
+```bash
+cd ../baselink-backend/order-service
+uvicorn main:app --reload --port 8001
+
+cd ../baselink-backend/ai-chatbot-service
+uvicorn main:app --reload --port 8000
+```
 
 ## 주요 구조
 

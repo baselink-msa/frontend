@@ -21,9 +21,15 @@ export const waitingRoomApi = {
   },
   issueToken: async (gameId: number): Promise<ApiResponse<TicketAccessToken>> => {
     if (USE_MOCK) return mockApi.waitingRoom.issueToken(gameId);
-    const { data } = await apiClient.post<ApiResponse<TicketAccessToken>>(
+    const { data } = await apiClient.post<ApiResponse<Omit<TicketAccessToken, 'expiresAt'>>>(
       `/waiting-room/games/${gameId}/issue-token`,
     );
-    return data;
+    return {
+      ...data,
+      data: {
+        ...data.data,
+        expiresAt: new Date(Date.now() + data.data.expiresIn * 1000).toISOString(),
+      },
+    };
   },
 };
