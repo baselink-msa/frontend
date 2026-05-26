@@ -15,6 +15,16 @@ type FormStatus = {
   error?: string;
 };
 
+type AdminTab = 'games' | 'seats' | 'operations' | 'content' | 'lists';
+
+const adminTabs: { id: AdminTab; label: string }[] = [
+  { id: 'games', label: '경기/구장' },
+  { id: 'seats', label: '좌석' },
+  { id: 'operations', label: '운영' },
+  { id: 'content', label: '메뉴/FAQ' },
+  { id: 'lists', label: '조회/API' },
+];
+
 const teams = [
   'KIA Tigers',
   'LG Twins',
@@ -58,11 +68,12 @@ const defaultDateTimeLocal = (hourOffset: number) => {
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
 };
 
-const toKstOffsetDateTime = (value: string) => `${value}:00+09:00`;
+const toLocalDateTime = (value: string) => `${value}:00`;
 
 export function AdminPage() {
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<FormStatus>({});
+  const [activeTab, setActiveTab] = useState<AdminTab>('games');
 
   const gamesQuery = useQuery({ queryKey: ['admin', 'games'], queryFn: gameApi.getGames });
   const menusQuery = useQuery({ queryKey: ['admin', 'menus'], queryFn: orderApi.getMenus });
@@ -96,23 +107,91 @@ export function AdminPage() {
       ) : null}
       <ErrorMessage message={status.error} />
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <StadiumAdminPanel />
-        <GameCreatePanel onStatus={handleStatus} />
-        <SeatAdminPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
-        <WaitingPolicyPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
-        <MenuCreatePanel onStatus={handleStatus} />
-        <FaqCreatePanel onStatus={handleStatus} />
-        <AdminOperationPanel games={gamesQuery.data?.data ?? []} />
-        <AdminApiRoadmapPanel />
+      <div className="mb-5 overflow-x-auto border-b border-slate-200">
+        <div className="flex min-w-max gap-1">
+          {adminTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`border-b-2 px-4 py-3 text-sm font-bold transition ${
+                activeTab === tab.id
+                  ? 'border-blue-700 text-blue-700'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="mt-8 grid gap-5 xl:grid-cols-3">
-        <GameListPanel games={gamesQuery.data?.data ?? []} isLoading={gamesQuery.isLoading} />
-        <MenuListPanel menus={menusQuery.data?.data ?? []} isLoading={menusQuery.isLoading} />
-        <FaqListPanel faqs={faqsQuery.data?.data ?? []} isLoading={faqsQuery.isLoading} />
-      </div>
+      {activeTab === 'games' ? (
+        <TabPanel title="경기/구장 관리" description="구장 정보를 확인하고 경기 일정을 등록합니다.">
+          <div className="grid gap-5 xl:grid-cols-2">
+            <StadiumAdminPanel />
+            <GameCreatePanel onStatus={handleStatus} />
+          </div>
+        </TabPanel>
+      ) : null}
+
+      {activeTab === 'seats' ? (
+        <TabPanel title="좌석 관리" description="구역, 좌석, 경기별 판매 좌석을 관리합니다.">
+          <SeatAdminPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
+        </TabPanel>
+      ) : null}
+
+      {activeTab === 'operations' ? (
+        <TabPanel title="운영 관리" description="대기열 정책과 경기 상태, 관리자 권한 같은 운영 액션을 관리합니다.">
+          <div className="grid gap-5 xl:grid-cols-2">
+            <WaitingPolicyPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
+            <AdminOperationPanel games={gamesQuery.data?.data ?? []} />
+          </div>
+        </TabPanel>
+      ) : null}
+
+      {activeTab === 'content' ? (
+        <TabPanel title="메뉴/FAQ 관리" description="주문 메뉴와 챗봇 FAQ 콘텐츠를 등록합니다.">
+          <div className="grid gap-5 xl:grid-cols-2">
+            <MenuCreatePanel onStatus={handleStatus} />
+            <FaqCreatePanel onStatus={handleStatus} />
+          </div>
+        </TabPanel>
+      ) : null}
+
+      {activeTab === 'lists' ? (
+        <TabPanel title="조회 및 API 필요 목록" description="현재 조회 가능한 데이터와 추가로 필요한 백엔드 API를 확인합니다.">
+          <div className="grid gap-5 xl:grid-cols-3">
+            <GameListPanel games={gamesQuery.data?.data ?? []} isLoading={gamesQuery.isLoading} />
+            <MenuListPanel menus={menusQuery.data?.data ?? []} isLoading={menusQuery.isLoading} />
+            <FaqListPanel faqs={faqsQuery.data?.data ?? []} isLoading={faqsQuery.isLoading} />
+          </div>
+          <div className="mt-5">
+            <AdminApiRoadmapPanel />
+          </div>
+        </TabPanel>
+      ) : null}
     </section>
+  );
+}
+
+function TabPanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-5">
+        <h2 className="text-xl font-black text-slate-950">{title}</h2>
+        <p className="mt-1 text-sm text-slate-600">{description}</p>
+      </div>
+      {children}
+    </div>
   );
 }
 
@@ -161,8 +240,8 @@ function GameCreatePanel({ onStatus }: { onStatus: (status: FormStatus) => void 
         homeTeamName,
         awayTeamName,
         stadiumId,
-        gameStartTime: toKstOffsetDateTime(gameStartTime),
-        ticketOpenTime: toKstOffsetDateTime(ticketOpenTime),
+        gameStartTime: toLocalDateTime(gameStartTime),
+        ticketOpenTime: toLocalDateTime(ticketOpenTime),
       });
     },
     onSuccess: (response) => onStatus({ success: response.message ?? '경기가 등록되었습니다.' }),
