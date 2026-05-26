@@ -9,10 +9,12 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState('');
+  const locationState = location.state as { from?: string; email?: string; message?: string } | null;
+  const from = locationState?.from ?? '/';
+  const signupMessage = locationState?.message;
+  const [email, setEmail] = useState(locationState?.email ?? '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
@@ -33,6 +35,11 @@ export function LoginPage() {
     <section className="mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-soft">
       <h1 className="text-2xl font-bold text-slate-950">로그인</h1>
       <p className="mt-2 text-sm text-slate-600">가입한 이메일과 비밀번호로 로그인하세요.</p>
+      {signupMessage ? (
+        <div className="mt-4 rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700">
+          {signupMessage}
+        </div>
+      ) : null}
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <label className="block">
           <span className="text-sm font-semibold text-slate-700">이메일</span>

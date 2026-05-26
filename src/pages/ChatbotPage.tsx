@@ -33,9 +33,10 @@ export function ChatbotPage() {
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (!message.trim()) return;
-    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', text: message }]);
-    sendMutation.mutate({ message });
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || sendMutation.isPending) return;
+    setMessages((prev) => [...prev, { id: `user-${Date.now()}`, role: 'user', text: trimmedMessage }]);
+    sendMutation.mutate({ message: trimmedMessage });
     setMessage('');
   };
 
@@ -50,22 +51,45 @@ export function ChatbotPage() {
           {messages.map((item) => (
             <ChatMessage key={item.id} message={item} />
           ))}
+          {sendMutation.isPending ? (
+            <ChatMessage
+              message={{
+                id: 'assistant-pending',
+                role: 'assistant',
+                text: '답변을 찾는 중입니다.',
+              }}
+            />
+          ) : null}
         </div>
         <form className="mt-4 flex gap-2" onSubmit={handleSubmit}>
           <input
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="병살타가 뭐야?"
+            disabled={sendMutation.isPending}
             className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-3"
           />
-          <button className="rounded-md bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800">
-            전송
+          <button
+            type="submit"
+            disabled={!message.trim() || sendMutation.isPending}
+            className="rounded-md bg-blue-700 px-5 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-50"
+          >
+            {sendMutation.isPending ? '전송 중' : '전송'}
           </button>
         </form>
       </div>
       <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
         <h2 className="text-lg font-bold text-slate-950">등록 FAQ</h2>
+        <div className="mt-4">
+          <ErrorMessage message={faqsQuery.error?.message} />
+        </div>
         <div className="mt-4 space-y-3">
+          {faqsQuery.isLoading ? (
+            <p className="text-sm text-slate-500">FAQ를 불러오는 중입니다.</p>
+          ) : null}
+          {!faqsQuery.isLoading && !faqsQuery.data?.data.length && !faqsQuery.error ? (
+            <p className="text-sm text-slate-500">등록된 FAQ가 없습니다.</p>
+          ) : null}
           {faqsQuery.data?.data.map((faq) => (
             <button
               type="button"

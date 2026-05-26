@@ -3,11 +3,9 @@ import { useMutation } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { useAuthStore } from '../store/authStore';
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore((state) => state.setAuth);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,9 +14,11 @@ export function SignupPage() {
 
   const signupMutation = useMutation({
     mutationFn: authApi.signup,
-    onSuccess: (response) => {
-      setAuth(response.data.accessToken, response.data.user);
-      navigate('/');
+    onSuccess: () => {
+      navigate('/login', {
+        replace: true,
+        state: { email, message: '회원가입이 완료되었습니다. 로그인해 주세요.' },
+      });
     },
     onError: (err) => setError(err.message || '회원가입에 실패했습니다.'),
   });
