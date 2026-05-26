@@ -1,22 +1,24 @@
 import { FormEvent, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { useAuthStore } from '../store/authStore';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const setAuth = useAuthStore((state) => state.setAuth);
-  const [email, setEmail] = useState('user@example.com');
-  const [password, setPassword] = useState('password1234');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const loginMutation = useMutation({
     mutationFn: authApi.login,
     onSuccess: (response) => {
       setAuth(response.data.accessToken, response.data.user);
-      navigate('/');
+      navigate(from, { replace: true });
     },
     onError: (err) => setError(err.message || '로그인에 실패했습니다.'),
   });
@@ -30,8 +32,7 @@ export function LoginPage() {
   return (
     <section className="mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-8 shadow-soft">
       <h1 className="text-2xl font-bold text-slate-950">로그인</h1>
-      <p className="mt-2 text-sm text-slate-600">Mock 계정: user@example.com / password1234</p>
-      <p className="mt-1 text-sm text-slate-600">관리자: admin@example.com / password1234</p>
+      <p className="mt-2 text-sm text-slate-600">가입한 이메일과 비밀번호로 로그인하세요.</p>
       <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
         <label className="block">
           <span className="text-sm font-semibold text-slate-700">이메일</span>

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../store/authStore';
 import type { User } from '../types/auth';
 import type { ApiResponse } from '../types/common';
 
@@ -47,6 +48,7 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('auth-storage');
+      useAuthStore.getState().logout();
     }
     const message =
       error.response?.data?.error?.message ??

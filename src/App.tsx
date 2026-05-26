@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/common/Layout';
+import { PublicOnly, RequireAdmin, RequireAuth } from './components/common/RouteGuards';
 import { AdminPage } from './pages/AdminPage';
 import { ChatbotPage } from './pages/ChatbotPage';
 import { GameDetailPage } from './pages/GameDetailPage';
@@ -18,17 +19,73 @@ export function App() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        <Route
+          path="/login"
+          element={
+            <PublicOnly>
+              <LoginPage />
+            </PublicOnly>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicOnly>
+              <SignupPage />
+            </PublicOnly>
+          }
+        />
         <Route path="/games" element={<GameListPage />} />
         <Route path="/games/:gameId" element={<GameDetailPage />} />
-        <Route path="/games/:gameId/waiting-room" element={<WaitingRoomPage />} />
-        <Route path="/games/:gameId/seats" element={<SeatSelectionPage />} />
-        <Route path="/reservations/:reservationId" element={<ReservationResultPage />} />
-        <Route path="/my-tickets" element={<MyTicketsPage />} />
-        <Route path="/orders" element={<OrderPage />} />
+        <Route
+          path="/games/:gameId/waiting-room"
+          element={
+            <RequireAuth>
+              <WaitingRoomPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/games/:gameId/seats"
+          element={
+            <RequireAuth>
+              <SeatSelectionPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/reservations/:reservationId"
+          element={
+            <RequireAuth>
+              <ReservationResultPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/my-tickets"
+          element={
+            <RequireAuth>
+              <MyTicketsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <RequireAuth>
+              <OrderPage />
+            </RequireAuth>
+          }
+        />
         <Route path="/chatbot" element={<ChatbotPage />} />
-        <Route path="/admin" element={<AdminPage />} />
+        <Route
+          path="/admin"
+          element={
+            <RequireAdmin>
+              <AdminPage />
+            </RequireAdmin>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

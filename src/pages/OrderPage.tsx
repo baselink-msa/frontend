@@ -15,6 +15,7 @@ export function OrderPage() {
   const [error, setError] = useState('');
 
   const menusQuery = useQuery({ queryKey: ['menus'], queryFn: orderApi.getMenus });
+  const canCreateOrder = Boolean(selectedGame && selectedSeat);
 
   const items = useMemo(
     () =>
@@ -27,8 +28,8 @@ export function OrderPage() {
   const orderMutation = useMutation({
     mutationFn: () =>
       orderApi.createOrder({
-        gameId: selectedGame?.gameId ?? 1,
-        seatId: selectedSeat?.seatId ?? 1001,
+        gameId: selectedGame?.gameId ?? 0,
+        seatId: selectedSeat?.seatId ?? 0,
         items,
       }),
     onSuccess: (response) => {
@@ -44,7 +45,7 @@ export function OrderPage() {
     <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div>
         <h1 className="text-3xl font-bold text-slate-950">주류 주문</h1>
-        <p className="mt-2 text-slate-600">MVP에서는 결제 없이 주문 생성 흐름만 시연합니다.</p>
+        <p className="mt-2 text-slate-600">예매 과정에서 선택한 경기와 좌석 기준으로 주문을 생성합니다.</p>
         <div className="mt-5">
           <ErrorMessage message={error || menusQuery.error?.message} />
         </div>
@@ -75,12 +76,18 @@ export function OrderPage() {
       </div>
       <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
         <h2 className="text-lg font-bold text-slate-950">주문 요약</h2>
-        <p className="mt-3 text-sm text-slate-600">
-          경기 ID {selectedGame?.gameId ?? 1}, 좌석 ID {selectedSeat?.seatId ?? 1001}
-        </p>
+        {canCreateOrder ? (
+          <p className="mt-3 text-sm text-slate-600">
+            경기 ID {selectedGame?.gameId}, 좌석 ID {selectedSeat?.seatId}
+          </p>
+        ) : (
+          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
+            경기와 좌석을 먼저 선택한 뒤 주문할 수 있습니다.
+          </p>
+        )}
         <button
           type="button"
-          disabled={items.length === 0 || orderMutation.isPending}
+          disabled={!canCreateOrder || items.length === 0 || orderMutation.isPending}
           onClick={() => orderMutation.mutate()}
           className="mt-5 w-full rounded-md bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-50"
         >

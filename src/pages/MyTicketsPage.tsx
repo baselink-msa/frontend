@@ -30,7 +30,7 @@ export function MyTicketsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data?.data.map((ticket) => (
+            {data?.data.length ? data.data.map((ticket) => (
               <tr key={ticket.reservationId}>
                 <td className="px-4 py-4 font-semibold text-slate-950">
                   {ticket.homeTeamName} vs {ticket.awayTeamName}
@@ -41,7 +41,13 @@ export function MyTicketsPage() {
                   <StatusBadge status={ticket.status} />
                 </td>
               </tr>
-            ))}
+            )) : (
+              <tr>
+                <td colSpan={4} className="px-4 py-10 text-center text-slate-500">
+                  아직 예매 내역이 없습니다.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

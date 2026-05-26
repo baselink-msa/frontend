@@ -1,19 +1,25 @@
 import { LogOut, Ticket } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { isAdminUser } from '../../utils/auth';
 
 const navItems = [
   { to: '/', label: '홈' },
   { to: '/games', label: '경기' },
-  { to: '/my-tickets', label: '내 예매' },
-  { to: '/orders', label: '주문' },
+  { to: '/my-tickets', label: '내 예매', auth: true },
+  { to: '/orders', label: '주문', auth: true },
   { to: '/chatbot', label: '챗봇' },
-  { to: '/admin', label: '관리자' },
+  { to: '/admin', label: '관리자', admin: true },
 ];
 
 export function Header() {
   const navigate = useNavigate();
   const { accessToken, user, logout } = useAuthStore();
+  const visibleNavItems = navItems.filter((item) => {
+    if ('admin' in item && item.admin) return isAdminUser(user);
+    if ('auth' in item && item.auth) return Boolean(accessToken);
+    return true;
+  });
 
   const handleLogout = () => {
     logout();
@@ -34,7 +40,7 @@ export function Header() {
           BaseLink
         </button>
         <nav className="flex flex-wrap items-center gap-2">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -52,7 +58,7 @@ export function Header() {
           {accessToken ? (
             <>
               <span className="text-slate-600">
-                {user?.name ?? '로그인됨'} {user?.role ? `(${user.role})` : ''}
+                {user?.name ?? '로그인됨'}
               </span>
               <button
                 type="button"

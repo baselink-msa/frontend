@@ -96,7 +96,8 @@ export const mockApi = {
     },
   },
   waitingRoom: {
-    enter: (gameId: number, _request: WaitingEnterRequest): Promise<ApiResponse<WaitingRoomState>> => {
+    enter: (gameId: number, request: WaitingEnterRequest): Promise<ApiResponse<WaitingRoomState>> => {
+      void request;
       const state: WaitingRoomState = {
         gameId,
         userId: 1,
@@ -154,7 +155,8 @@ export const mockApi = {
         '좌석이 임시 잠금되었습니다.',
       );
     },
-    release: async (_lockId: string): Promise<void> => {
+    release: async (lockId: string): Promise<void> => {
+      void lockId;
       await delay(120);
     },
   },

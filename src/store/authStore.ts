@@ -6,6 +6,7 @@ type AuthState = {
   accessToken: string | null;
   user: User | null;
   setAuth: (accessToken: string, user: User) => void;
+  setUser: (user: User) => void;
   logout: () => void;
 };
 
@@ -18,6 +19,7 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('accessToken', accessToken);
         set({ accessToken, user });
       },
+      setUser: (user) => set({ user }),
       logout: () => {
         localStorage.removeItem('accessToken');
         set({ accessToken: null, user: null });

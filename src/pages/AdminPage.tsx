@@ -2,7 +2,6 @@ import { FormEvent, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { adminApi } from '../api/adminApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
-import { useAuthStore } from '../store/authStore';
 
 type FormStatus = {
   success?: string;
@@ -10,7 +9,6 @@ type FormStatus = {
 };
 
 export function AdminPage() {
-  const user = useAuthStore((state) => state.user);
   const [status, setStatus] = useState<FormStatus>({});
 
   return (
@@ -21,11 +19,6 @@ export function AdminPage() {
         <p className="mt-2 text-slate-600">
           경기, 좌석, 대기열 정책, 메뉴, FAQ 등록 API를 시연하기 위한 폼입니다.
         </p>
-        {user?.role !== 'ADMIN' ? (
-          <p className="mt-3 rounded-lg bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
-            Mock 환경에서는 일반 사용자도 화면 확인이 가능하지만 실제 API에서는 ADMIN 권한을 확인하세요.
-          </p>
-        ) : null}
       </div>
       {status.success ? (
         <div className="mb-5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
