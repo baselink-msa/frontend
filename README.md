@@ -108,3 +108,28 @@ uvicorn main:app --reload --port 8000
 ## 배포 참고
 
 `npm run build` 결과물은 `dist/`에 생성됩니다. S3 정적 호스팅 또는 CloudFront origin으로 업로드하면 됩니다. React Router의 deep link를 위해 CloudFront/S3에서 403/404 응답을 `/index.html`로 fallback하도록 설정하세요.
+
+### AWS 배포 환경
+
+프로덕션 빌드는 `.env.production`을 사용합니다.
+
+```bash
+VITE_API_BASE_URL=/api
+VITE_USE_MOCK=false
+```
+
+이 설정은 CloudFront에서 `/api/*`를 백엔드 API origin으로 라우팅하는 구성을 전제로 합니다. 예를 들어 기본 origin은 S3 정적 웹, `/api/*` behavior는 EKS 앞단의 ALB 또는 API Gateway로 연결합니다.
+
+AWS CLI로 확인한 현재 상태:
+
+- 계정: `740831361032`
+- 리전: `ap-northeast-2`
+- EKS 클러스터: `baselink-dev`
+- 네임스페이스: `baselink-dev`
+- 백엔드 서비스들은 EKS 안에 `ClusterIP`로 배포되어 있음
+- 현재 외부 접근 가능한 ALB/NLB/API Gateway/Ingress 주소는 없음
+
+따라서 아직 브라우저/CloudFront에서 직접 호출할 백엔드 URL은 없습니다. 백엔드 외부 진입점이 생기면 둘 중 하나로 배포하면 됩니다.
+
+1. CloudFront `/api/*` behavior를 ALB/API Gateway origin으로 연결하고 `VITE_API_BASE_URL=/api` 유지
+2. 별도 API 도메인을 사용하고 `VITE_API_BASE_URL=https://api.example.com/api`로 빌드
