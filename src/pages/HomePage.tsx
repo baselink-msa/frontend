@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { ArrowRight, Bot, CalendarDays, CupSoda, MapPin, Ticket } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { gameApi } from '../api/gameApi';
 
 const slides = [
   {
@@ -118,23 +120,7 @@ export function HomePage() {
       </div>
 
       <div className="grid gap-4 rounded-lg border border-slate-200 bg-white p-6 md:grid-cols-[1fr_1fr] md:p-8">
-        <div>
-          <p className="text-sm font-bold text-blue-700">이번 주 추천</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">KIA Tigers vs LG Twins</h2>
-          <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
-            <MapPin size={16} />
-            광주-KIA 챔피언스 필드
-          </p>
-        </div>
-        <div className="flex items-center justify-start md:justify-end">
-          <Link
-            to="/games/1"
-            className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100"
-          >
-            추천 경기 상세
-            <ArrowRight size={17} />
-          </Link>
-        </div>
+        <RecommendedGame />
       </div>
     </section>
   );
@@ -162,5 +148,40 @@ function HomeLinkCard({
       <h2 className="mt-4 text-lg font-bold text-slate-950">{title}</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
     </Link>
+  );
+}
+
+function RecommendedGame() {
+  const { data } = useQuery({ queryKey: ['games'], queryFn: gameApi.getGames });
+  const game = data?.data?.[0];
+
+  if (!game) {
+    return (
+      <p className="col-span-2 text-sm text-slate-500">등록된 경기가 없습니다.</p>
+    );
+  }
+
+  return (
+    <>
+      <div>
+        <p className="text-sm font-bold text-blue-700">추천 경기</p>
+        <h2 className="mt-2 text-2xl font-black text-slate-950">
+          {game.homeTeamName} vs {game.awayTeamName}
+        </h2>
+        <p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-600">
+          <MapPin size={16} />
+          {game.stadiumName}
+        </p>
+      </div>
+      <div className="flex items-center justify-start md:justify-end">
+        <Link
+          to={`/games/${game.gameId}`}
+          className="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-blue-50 px-5 py-3 text-sm font-bold text-blue-800 hover:bg-blue-100"
+        >
+          경기 상세
+          <ArrowRight size={17} />
+        </Link>
+      </div>
+    </>
   );
 }
