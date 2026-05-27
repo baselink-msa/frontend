@@ -30,6 +30,17 @@ export function SeatSelectionPage() {
     queryFn: () => gameApi.getSeats(numericGameId, { sectionId }),
   });
 
+  // 로컬에서 잠금된 좌석 추적 (Redis 잠금이 DB에 반영 안 되므로)
+  const [lockedSeatIds, setLockedSeatIds] = useState<Set<number>>(new Set());
+
+  const displaySeats = useMemo(() => {
+    const seats = seatsQuery.data?.data ?? [];
+    if (lockedSeatIds.size === 0) return seats;
+    return seats.map((seat) =>
+      lockedSeatIds.has(seat.seatId) ? { ...seat, status: 'LOCKED' as const } : seat,
+    );
+  }, [seatsQuery.data, lockedSeatIds]);
+
   // 예매 요청: 잠금 → 예매 한 번에 처리
   const reservationMutation = useMutation({
     mutationFn: async () => {
@@ -54,6 +65,7 @@ export function SeatSelectionPage() {
 
       // store에 저장
       setSelectedSeat({ ...pickedSeat, status: 'LOCKED' }, lockId);
+      setLockedSeatIds((prev) => new Set(prev).add(pickedSeat.seatId));
 
       return result;
     },
@@ -95,7 +107,7 @@ export function SeatSelectionPage() {
         <ErrorMessage message={error || seatsQuery.error?.message} />
         <div className="mt-4">
           <SeatGrid
-            seats={seatsQuery.data?.data ?? []}
+            seats={displaySeats}
             selectedSeatId={pickedSeat?.seatId}
             onSelect={(seat) => {
               setError('');
