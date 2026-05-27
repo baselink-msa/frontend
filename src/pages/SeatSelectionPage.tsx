@@ -16,8 +16,9 @@ export function SeatSelectionPage() {
   const numericGameId = Number(gameId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { ticketAccessToken, selectedSeat, lockId, setSelectedSeat } = useReservationStore();
+  const { ticketAccessToken, setSelectedSeat } = useReservationStore();
   const [sectionId, setSectionId] = useState<number | undefined>();
+  const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
 
   const sectionsQuery = useQuery({
@@ -29,36 +30,43 @@ export function SeatSelectionPage() {
     queryFn: () => gameApi.getSeats(numericGameId, { sectionId }),
   });
 
-  const lockMutation = useMutation({
-    mutationFn: (seat: GameSeat) => seatLockApi.createLock({ gameId: numericGameId, seatId: seat.seatId }),
-    onSuccess: (response) => {
-      const seat = seatsQuery.data?.data.find((item) => item.seatId === response.data.seatId);
-      if (seat) setSelectedSeat({ ...seat, status: 'LOCKED' }, response.data.lockId);
-      queryClient.invalidateQueries({ queryKey: ['seats', numericGameId] });
-    },
-    onError: (err) => setError(err.message || '좌석 잠금에 실패했습니다.'),
-  });
-
+  // 예매 요청: 잠금 → 예매 한 번에 처리
   const reservationMutation = useMutation({
-    mutationFn: () => {
-      if (!selectedSeat || !lockId || !ticketAccessToken) {
-        throw new Error('대기열 토큰 또는 좌석 잠금 정보가 없습니다.');
-      }
-      return ticketApi.createReservation({
+    mutationFn: async () => {
+      if (!pickedSeat) throw new Error('좌석을 선택해 주세요.');
+      if (!ticketAccessToken) throw new Error('대기열 토큰이 없습니다. 대기열을 다시 통과해 주세요.');
+
+      // 1. 좌석 잠금
+      const lockResponse = await seatLockApi.createLock({
         gameId: numericGameId,
-        seatId: selectedSeat.seatId,
+        seatId: pickedSeat.seatId,
+      });
+      const lockId = lockResponse.data.lockId;
+
+      // 2. 예매 요청
+      const result = await ticketApi.createReservation({
+        gameId: numericGameId,
+        seatId: pickedSeat.seatId,
         lockId,
         ticketAccessToken,
-        idempotencyKey: `ticket-1-${numericGameId}-${selectedSeat.seatId}`,
+        idempotencyKey: `ticket-${numericGameId}-${pickedSeat.seatId}-${Date.now()}`,
       });
+
+      // store에 저장
+      setSelectedSeat({ ...pickedSeat, status: 'LOCKED' }, lockId);
+
+      return result;
     },
-    onSuccess: (response) => navigate(`/reservations/${response.data.reservationId}`),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['seats', numericGameId] });
+      navigate(`/reservations/${response.data.reservationId}`);
+    },
     onError: (err) => setError(err.message || '예매 요청에 실패했습니다.'),
   });
 
   const selectedSection = useMemo(
-    () => sectionsQuery.data?.data.find((section) => section.sectionId === sectionId),
-    [sectionsQuery.data, sectionId],
+    () => sectionsQuery.data?.data.find((section) => section.sectionId === pickedSeat?.sectionId),
+    [sectionsQuery.data, pickedSeat],
   );
 
   if (sectionsQuery.isLoading || seatsQuery.isLoading) return <Loading label="좌석 정보를 불러오는 중입니다." />;
@@ -88,34 +96,33 @@ export function SeatSelectionPage() {
         <div className="mt-4">
           <SeatGrid
             seats={seatsQuery.data?.data ?? []}
-            selectedSeatId={selectedSeat?.seatId}
+            selectedSeatId={pickedSeat?.seatId}
             onSelect={(seat) => {
               setError('');
-              lockMutation.mutate(seat);
+              setPickedSeat(seat);
             }}
           />
         </div>
       </div>
       <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
         <h2 className="text-lg font-bold text-slate-950">선택 좌석</h2>
-        {selectedSeat ? (
+        {pickedSeat ? (
           <div className="mt-4 space-y-3 text-sm">
             <p className="font-semibold text-slate-900">
-              {selectedSeat.sectionName} {selectedSeat.seatRow}-{selectedSeat.seatNumber}
+              {pickedSeat.sectionName} {pickedSeat.seatRow}열 {pickedSeat.seatNumber}번
             </p>
-            <p className="text-slate-600">가격 {formatCurrency(selectedSection?.price ?? selectedSeat.price)}</p>
-            <p className="text-slate-600">잠금 ID {lockId}</p>
+            <p className="text-slate-600">가격 {formatCurrency(selectedSection?.price ?? pickedSeat.price)}</p>
           </div>
         ) : (
-          <p className="mt-4 text-sm text-slate-500">AVAILABLE 좌석을 선택하면 임시 잠금됩니다.</p>
+          <p className="mt-4 text-sm text-slate-500">좌석을 선택하면 예매할 수 있습니다.</p>
         )}
         <button
           type="button"
-          disabled={!selectedSeat || !lockId || reservationMutation.isPending}
+          disabled={!pickedSeat || reservationMutation.isPending}
           onClick={() => reservationMutation.mutate()}
           className="mt-6 w-full rounded-md bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-50"
         >
-          {reservationMutation.isPending ? '예매 요청 중' : '예매 요청'}
+          {reservationMutation.isPending ? '예매 처리 중...' : '예매 요청'}
         </button>
       </aside>
     </section>

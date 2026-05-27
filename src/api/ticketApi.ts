@@ -66,12 +66,23 @@ export const ticketApi = {
   },
   getReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
     if (USE_MOCK) return mockApi.tickets.detail(reservationId);
-    const cached = getCachedReservation(reservationId);
-    if (cached) return toApiResponse(cached);
-    throw new Error('현재 백엔드에는 예매 상세 조회 API가 아직 없습니다.');
+    const { data } = await apiClient.get<BackendReservation>(`/tickets/${reservationId}`);
+    const detail = cacheReservation(data);
+    return toApiResponse(detail);
   },
   getMyTickets: async (): Promise<ApiResponse<MyTicket[]>> => {
     if (USE_MOCK) return mockApi.tickets.my();
-    return toApiResponse([]);
+    const { data } = await apiClient.get<BackendReservation[]>('/tickets/my');
+    return toApiResponse(
+      data.map((r) => ({
+        reservationId: r.reservationId,
+        gameId: r.gameId,
+        homeTeamName: '',
+        awayTeamName: '',
+        gameStartTime: r.createdAt,
+        seatName: `seat-${r.seatId}`,
+        status: r.status,
+      })),
+    );
   },
 };

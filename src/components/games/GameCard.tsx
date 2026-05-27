@@ -9,6 +9,12 @@ type GameCardProps = {
 };
 
 export function GameCard({ game }: GameCardProps) {
+  // 예매 오픈 시간이 지났으면 프론트에서 상태를 보정
+  const effectiveStatus =
+    game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
+      ? 'TICKET_OPEN'
+      : game.status;
+
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
       <div className="flex items-start justify-between gap-4">
@@ -18,7 +24,7 @@ export function GameCard({ game }: GameCardProps) {
             {game.homeTeamName} vs {game.awayTeamName}
           </h2>
         </div>
-        <StatusBadge status={game.status} />
+        <StatusBadge status={effectiveStatus} />
       </div>
       <div className="mt-5 space-y-2 text-sm text-slate-600">
         <p className="flex items-center gap-2">
