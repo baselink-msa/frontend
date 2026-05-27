@@ -85,4 +85,16 @@ export const ticketApi = {
       })),
     );
   },
+
+  confirmReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
+    const { data } = await apiClient.post<BackendReservation>(`/tickets/${reservationId}/confirm`);
+    const detail = cacheReservation(data);
+    return toApiResponse(detail, '예매가 확정되었습니다.');
+  },
+
+  cancelReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
+    const { data } = await apiClient.post<BackendReservation>(`/tickets/${reservationId}/cancel`);
+    const detail = cacheReservation(data);
+    return toApiResponse(detail, '예매가 취소되었습니다.');
+  },
 };
