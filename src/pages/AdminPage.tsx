@@ -38,20 +38,13 @@ const teams = [
   'Kiwoom Heroes',
 ];
 
-const stadiums = [
-  { stadiumId: 1, name: '광주-KIA 챔피언스 필드' },
-  { stadiumId: 2, name: '잠실야구장' },
-  { stadiumId: 3, name: '대구 삼성 라이온즈 파크' },
-  { stadiumId: 4, name: '사직야구장' },
-  { stadiumId: 5, name: '인천 SSG 랜더스필드' },
-];
+const stadiums = [] as { stadiumId: number; name: string }[]; // 아래에서 API로 대체됨
 
 const sectionNames = ['1루 내야석', '3루 내야석', '중앙 테이블석', '외야석', '응원석'];
 const faqCategories = ['RULE', 'TERM', 'TICKET', 'STADIUM', 'ORDER'];
 const gameStatuses = ['SCHEDULED', 'TICKET_OPEN', 'SOLD_OUT', 'CLOSED'];
 
 const requiredAdminApis = [
-  '구장 등록/수정/삭제 API (조회만 구현됨)',
   '팀 등록/수정/삭제 API',
   '관리자 사용자 권한 부여/회수 API',
 ];
@@ -72,6 +65,9 @@ export function AdminPage() {
   const gamesQuery = useQuery({ queryKey: ['admin', 'games'], queryFn: gameApi.getGames });
   const menusQuery = useQuery({ queryKey: ['admin', 'menus'], queryFn: orderApi.getMenus });
   const faqsQuery = useQuery({ queryKey: ['admin', 'faqs'], queryFn: chatbotApi.getFaqs });
+  const stadiumsQuery = useQuery({ queryKey: ['admin', 'stadiums'], queryFn: adminApi.getStadiums });
+
+  const stadiumList = (stadiumsQuery.data?.data ?? []).map(s => ({ stadiumId: s.stadiumId, name: s.name }));
 
   const refreshAdminQueries = () => {
     queryClient.invalidateQueries({ queryKey: ['admin'] });
@@ -123,15 +119,15 @@ export function AdminPage() {
       {activeTab === 'games' ? (
         <TabPanel title="경기/구장 관리" description="구장 정보를 확인하고 경기 일정을 등록합니다.">
           <div className="grid gap-5 xl:grid-cols-2">
-            <StadiumAdminPanel />
-            <GameCreatePanel onStatus={handleStatus} />
+            <StadiumAdminPanel onStatus={handleStatus} />
+            <GameCreatePanel stadiums={stadiumList} onStatus={handleStatus} />
           </div>
         </TabPanel>
       ) : null}
 
       {activeTab === 'seats' ? (
         <TabPanel title="좌석 관리" description="구역, 좌석, 경기별 판매 좌석을 관리합니다.">
-          <SeatAdminPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
+          <SeatAdminPanel games={gamesQuery.data?.data ?? []} stadiums={stadiumList} onStatus={handleStatus} />
         </TabPanel>
       ) : null}
 
@@ -189,50 +185,75 @@ function TabPanel({
   );
 }
 
-function StadiumAdminPanel() {
+function StadiumAdminPanel({ onStatus }: { onStatus: (status: FormStatus) => void }) {
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
   const [capacity, setCapacity] = useState(20000);
+  const queryClient = useQueryClient();
+
+  const stadiumsQuery = useQuery({ queryKey: ['admin', 'stadiums'], queryFn: adminApi.getStadiums });
+  const stadiumData = stadiumsQuery.data?.data ?? [];
+
+  const createMutation = useMutation({
+    mutationFn: () => adminApi.createStadium({ name, location, capacity }),
+    onSuccess: (response) => {
+      onStatus({ success: response.message ?? '구장이 등록되었습니다.' });
+      setName(''); setLocation('');
+    },
+    onError: (err) => onStatus({ error: err.message }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (stadiumId: number) => adminApi.deleteStadium(stadiumId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'stadiums'] });
+      onStatus({ success: '구장이 삭제되었습니다.' });
+    },
+    onError: (err) => onStatus({ error: err.message }),
+  });
 
   return (
-    <Panel title="구장 관리" description="경기 등록에 사용할 구장 정보를 관리합니다.">
+    <Panel title="구장 관리" description="경기 등록에 사용할 구장을 등록하고 관리합니다.">
       <div className="grid gap-5">
-        <form className="grid gap-3">
+        <form onSubmit={(event) => submit(event, createMutation.mutate)} className="grid gap-3">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_140px]">
-            <TextField label="구장명" value={name} onChange={setName} placeholder="서울 잠실야구장" />
+            <TextField label="구장명" value={name} onChange={setName} placeholder="잠실야구장" />
             <TextField label="지역" value={location} onChange={setLocation} placeholder="서울 송파구" />
             <NumberField label="수용 인원" value={capacity} onChange={setCapacity} min={1} />
           </div>
-          <DisabledAction label="구장 등록 API 필요" />
+          <SubmitButton label="구장 등록" isPending={createMutation.isPending} />
         </form>
         <div className="space-y-3 border-t border-slate-100 pt-5">
-          {stadiums.map((stadium) => (
+          {stadiumData.map((stadium) => (
             <AdminListItem
               key={stadium.stadiumId}
               title={stadium.name}
-              description={`구장 ID ${stadium.stadiumId}`}
+              description={`${stadium.location} · 수용 ${stadium.capacity.toLocaleString()}명`}
+              onDelete={() => { if (confirm(`"${stadium.name}" 구장을 삭제하시겠습니까?`)) deleteMutation.mutate(stadium.stadiumId); }}
             />
           ))}
+          {!stadiumData.length ? <EmptyText label="등록된 구장이 없습니다." /> : null}
         </div>
       </div>
     </Panel>
   );
 }
 
-function GameCreatePanel({ onStatus }: { onStatus: (status: FormStatus) => void }) {
+function GameCreatePanel({ stadiums, onStatus }: { stadiums: { stadiumId: number; name: string }[]; onStatus: (status: FormStatus) => void }) {
   const [homeTeamName, setHomeTeamName] = useState(teams[0]);
   const [awayTeamName, setAwayTeamName] = useState(teams[1]);
-  const [stadiumId, setStadiumId] = useState(stadiums[0].stadiumId);
+  const [stadiumId, setStadiumId] = useState<number | ''>(stadiums[0]?.stadiumId ?? '');
   const [gameStartTime, setGameStartTime] = useState(defaultDateTimeLocal(72));
   const [ticketOpenTime, setTicketOpenTime] = useState(defaultDateTimeLocal(24));
 
   const mutation = useMutation({
     mutationFn: () => {
       if (homeTeamName === awayTeamName) throw new Error('홈팀과 원정팀은 다르게 선택해야 합니다.');
+      if (!stadiumId) throw new Error('구장을 선택해 주세요.');
       return adminApi.createGame({
         homeTeamName,
         awayTeamName,
-        stadiumId,
+        stadiumId: Number(stadiumId),
         gameStartTime: toLocalDateTime(gameStartTime),
         ticketOpenTime: toLocalDateTime(ticketOpenTime),
       });
@@ -274,12 +295,14 @@ function GameCreatePanel({ onStatus }: { onStatus: (status: FormStatus) => void 
 
 function SeatAdminPanel({
   games,
+  stadiums,
   onStatus,
 }: {
   games: GameSummary[];
+  stadiums: { stadiumId: number; name: string }[];
   onStatus: (status: FormStatus) => void;
 }) {
-  const [stadiumId, setStadiumId] = useState(stadiums[0].stadiumId);
+  const [stadiumId, setStadiumId] = useState<number | ''>(stadiums[0]?.stadiumId ?? '');
   const [sectionName, setSectionName] = useState(sectionNames[0]);
   const [price, setPrice] = useState(30000);
   const [seatRow, setSeatRow] = useState('A');
@@ -297,7 +320,10 @@ function SeatAdminPanel({
   });
 
   const createSectionMutation = useMutation({
-    mutationFn: () => adminApi.createSeatSection({ stadiumId, sectionName, price }),
+    mutationFn: () => {
+      if (!stadiumId) throw new Error('구장을 선택해 주세요.');
+      return adminApi.createSeatSection({ stadiumId: Number(stadiumId), sectionName, price });
+    },
     onSuccess: (response) => onStatus({ success: response.message ?? '좌석 구역이 등록되었습니다.' }),
     onError: (err) => onStatus({ error: err.message ?? '좌석 구역 등록에 실패했습니다.' }),
   });
@@ -309,7 +335,7 @@ function SeatAdminPanel({
       const numbers = Array.from({ length: seatEnd - seatStart + 1 }, (_, index) => seatStart + index);
       for (const seatNumber of numbers) {
         await adminApi.createSeat({
-          stadiumId,
+          stadiumId: Number(stadiumId),
           sectionId,
           seatRow,
           seatNumber: String(seatNumber),
@@ -610,6 +636,12 @@ function FaqCreatePanel({ onStatus }: { onStatus: (status: FormStatus) => void }
 }
 
 function GameListPanel({ games, isLoading }: { games: GameSummary[]; isLoading: boolean }) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (gameId: number) => adminApi.deleteGame(gameId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  });
+
   return (
     <Panel title="경기 조회" description="등록된 경기 목록입니다.">
       {isLoading ? <Loading label="경기 목록을 불러오는 중입니다." /> : null}
@@ -619,6 +651,7 @@ function GameListPanel({ games, isLoading }: { games: GameSummary[]; isLoading: 
             key={game.gameId}
             title={`${game.homeTeamName} vs ${game.awayTeamName}`}
             description={`${game.stadiumName} · ${formatDateTime(game.gameStartTime)}`}
+            onDelete={() => { if (confirm('경기를 삭제하시겠습니까?')) deleteMutation.mutate(game.gameId); }}
           />
         ))}
         {!isLoading && !games.length ? <EmptyText label="등록된 경기가 없습니다." /> : null}
