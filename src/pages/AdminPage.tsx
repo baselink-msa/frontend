@@ -211,7 +211,6 @@ function StadiumAdminPanel() {
               key={stadium.stadiumId}
               title={stadium.name}
               description={`구장 ID ${stadium.stadiumId}`}
-              actionLabel="수정/삭제 API 필요"
             />
           ))}
         </div>
