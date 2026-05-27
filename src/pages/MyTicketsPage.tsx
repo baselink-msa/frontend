@@ -50,14 +50,22 @@ export function MyTicketsPage() {
                 </Link>
               ) : null}
               {(ticket.status === 'PENDING' || ticket.status === 'CONFIRMED') ? (
-                <button
-                  type="button"
-                  onClick={() => { if (confirm('예매를 취소하시겠습니까?')) cancelMutation.mutate(ticket.reservationId); }}
-                  disabled={cancelMutation.isPending}
-                  className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
-                >
-                  취소
-                </button>
+                <>
+                  <Link
+                    to={`/games/${ticket.gameId}/seats`}
+                    className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                  >
+                    좌석 변경
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => { if (confirm('예매를 취소하시겠습니까?')) cancelMutation.mutate(ticket.reservationId); }}
+                    disabled={cancelMutation.isPending}
+                    className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                </>
               ) : null}
             </div>
           </div>
