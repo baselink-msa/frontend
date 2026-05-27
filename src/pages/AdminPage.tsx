@@ -51,14 +51,8 @@ const faqCategories = ['RULE', 'TERM', 'TICKET', 'STADIUM', 'ORDER'];
 const gameStatuses = ['SCHEDULED', 'TICKET_OPEN', 'SOLD_OUT', 'CLOSED'];
 
 const requiredAdminApis = [
-  '구장 등록/수정/삭제 API',
+  '구장 등록/수정/삭제 API (조회만 구현됨)',
   '팀 등록/수정/삭제 API',
-  '경기 수정/상태 변경/삭제 API',
-  '좌석 구역 수정/삭제 API',
-  '좌석 조회/수정/삭제 API',
-  '경기 좌석 조회/가격 변경/삭제 API',
-  '메뉴 수정/삭제 API',
-  'FAQ 수정/삭제 API',
   '관리자 사용자 권한 부여/회수 API',
 ];
 
@@ -145,7 +139,7 @@ export function AdminPage() {
         <TabPanel title="운영 관리" description="대기열 정책과 경기 상태, 관리자 권한 같은 운영 액션을 관리합니다.">
           <div className="grid gap-5 xl:grid-cols-2">
             <WaitingPolicyPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
-            <AdminOperationPanel games={gamesQuery.data?.data ?? []} />
+            <AdminOperationPanel games={gamesQuery.data?.data ?? []} onStatus={handleStatus} />
           </div>
         </TabPanel>
       ) : null}
@@ -217,7 +211,6 @@ function StadiumAdminPanel() {
               key={stadium.stadiumId}
               title={stadium.name}
               description={`구장 ID ${stadium.stadiumId}`}
-              actionLabel="수정/삭제 API 필요"
             />
           ))}
         </div>
@@ -462,9 +455,27 @@ function WaitingPolicyPanel({
   );
 }
 
-function AdminOperationPanel({ games }: { games: GameSummary[] }) {
+function AdminOperationPanel({ games, onStatus }: { games: GameSummary[]; onStatus: (status: FormStatus) => void }) {
   const [gameId, setGameId] = useState<number | ''>('');
   const [status, setStatus] = useState(gameStatuses[0]);
+
+  const changeStatusMutation = useMutation({
+    mutationFn: () => {
+      if (!gameId) throw new Error('경기를 선택해 주세요.');
+      return adminApi.changeGameStatus(gameId, status);
+    },
+    onSuccess: () => onStatus({ success: '경기 상태가 변경되었습니다.' }),
+    onError: (err) => onStatus({ error: err.message }),
+  });
+
+  const deleteGameMutation = useMutation({
+    mutationFn: () => {
+      if (!gameId) throw new Error('경기를 선택해 주세요.');
+      return adminApi.deleteGame(gameId);
+    },
+    onSuccess: () => onStatus({ success: '경기가 삭제되었습니다.' }),
+    onError: (err) => onStatus({ error: err.message }),
+  });
 
   return (
     <Panel title="운영 액션" description="상태 변경, 삭제, 권한 관리처럼 운영 중 필요한 액션입니다.">
@@ -487,8 +498,17 @@ function AdminOperationPanel({ games }: { games: GameSummary[] }) {
           </label>
           <SelectField label="변경할 경기 상태" value={status} onChange={setStatus} options={gameStatuses} />
           <div className="flex flex-wrap gap-2">
-            <DisabledAction label="경기 상태 변경 API 필요" />
-            <DisabledAction label="경기 삭제 API 필요" danger />
+            <ActionButton
+              label="경기 상태 변경"
+              isPending={changeStatusMutation.isPending}
+              onClick={() => changeStatusMutation.mutate()}
+            />
+            <ActionButton
+              label="경기 삭제"
+              isPending={deleteGameMutation.isPending}
+              onClick={() => { if (confirm('정말 삭제하시겠습니까?')) deleteGameMutation.mutate(); }}
+              danger
+            />
           </div>
         </div>
 
@@ -502,16 +522,6 @@ function AdminOperationPanel({ games }: { games: GameSummary[] }) {
             />
             <DisabledAction label="권한 부여 API 필요" />
             <DisabledAction label="권한 회수 API 필요" danger />
-          </div>
-        </div>
-
-        <div className="grid gap-3 border-t border-slate-100 pt-5">
-          <p className="text-sm font-bold text-slate-950">데이터 삭제</p>
-          <div className="flex flex-wrap gap-2">
-            <DisabledAction label="좌석 삭제 API 필요" danger />
-            <DisabledAction label="경기 좌석 삭제 API 필요" danger />
-            <DisabledAction label="메뉴 삭제 API 필요" danger />
-            <DisabledAction label="FAQ 삭제 API 필요" danger />
           </div>
         </div>
       </div>
@@ -624,6 +634,12 @@ function MenuListPanel({
   menus: { menuId: number; name: string; price: number; available: boolean }[];
   isLoading: boolean;
 }) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (menuId: number) => adminApi.deleteMenu(menuId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  });
+
   return (
     <Panel title="메뉴 조회" description="현재 주문 화면에 노출되는 메뉴입니다.">
       {isLoading ? <Loading label="메뉴를 불러오는 중입니다." /> : null}
@@ -633,6 +649,7 @@ function MenuListPanel({
             key={menu.menuId}
             title={menu.name}
             description={`${formatCurrency(menu.price)} · ${menu.available ? '판매중' : '품절'}`}
+            onDelete={() => { if (confirm('삭제하시겠습니까?')) deleteMutation.mutate(menu.menuId); }}
           />
         ))}
         {!isLoading && !menus.length ? <EmptyText label="등록된 메뉴가 없습니다." /> : null}
@@ -648,6 +665,12 @@ function FaqListPanel({
   faqs: { faqId: number; category: string; question: string; enabled: boolean }[];
   isLoading: boolean;
 }) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (faqId: number) => adminApi.deleteFaq(faqId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+  });
+
   return (
     <Panel title="FAQ 조회" description="챗봇 FAQ 목록입니다.">
       {isLoading ? <Loading label="FAQ를 불러오는 중입니다." /> : null}
@@ -657,6 +680,7 @@ function FaqListPanel({
             key={faq.faqId}
             title={faq.question}
             description={`${faq.category} · ${faq.enabled ? '노출' : '숨김'}`}
+            onDelete={() => { if (confirm('삭제하시겠습니까?')) deleteMutation.mutate(faq.faqId); }}
           />
         ))}
         {!isLoading && !faqs.length ? <EmptyText label="등록된 FAQ가 없습니다." /> : null}
@@ -668,11 +692,11 @@ function FaqListPanel({
 function AdminListItem({
   title,
   description,
-  actionLabel = '삭제 API 필요',
+  onDelete,
 }: {
   title: string;
   description: string;
-  actionLabel?: string;
+  onDelete?: () => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 px-3 py-3">
@@ -680,14 +704,15 @@ function AdminListItem({
         <p className="truncate text-sm font-bold text-slate-950">{title}</p>
         <p className="mt-1 truncate text-xs text-slate-500">{description}</p>
       </div>
-      <button
-        type="button"
-        disabled
-        title="백엔드 API가 추가되면 연결할 수 있습니다."
-        className="shrink-0 rounded-md border border-slate-200 px-3 py-2 text-xs font-bold text-slate-400"
-      >
-        {actionLabel}
-      </button>
+      {onDelete ? (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="shrink-0 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-600 hover:bg-red-100"
+        >
+          삭제
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -824,6 +849,23 @@ function SubmitButton({ label, isPending }: { label: string; isPending: boolean 
       type="submit"
       disabled={isPending}
       className="w-fit rounded-md bg-blue-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-60"
+    >
+      {isPending ? '처리 중' : label}
+    </button>
+  );
+}
+
+function ActionButton({ label, isPending, onClick, danger = false }: { label: string; isPending: boolean; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={isPending}
+      onClick={onClick}
+      className={`w-fit rounded-md border px-3 py-2 text-xs font-bold disabled:opacity-60 ${
+        danger
+          ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+          : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+      }`}
     >
       {isPending ? '처리 중' : label}
     </button>
