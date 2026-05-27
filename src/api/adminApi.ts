@@ -111,9 +111,16 @@ export const adminApi = {
     await apiClient.delete(`/admin/faqs/${faqId}`);
   },
 
-  // ===== 구장 조회 =====
+  // ===== 구장 조회/등록/삭제 =====
   getStadiums: async () => {
-    const { data } = await apiClient.get<ApiResponse<unknown[]>>('/admin/stadiums');
+    const { data } = await apiClient.get<ApiResponse<{ stadiumId: number; name: string; location: string; capacity: number }[]>>('/admin/stadiums');
     return data;
+  },
+  createStadium: async (request: { name: string; location: string; capacity: number }) => {
+    const { data } = await apiClient.post<ApiResponse<unknown>>('/admin/stadiums', request);
+    return data;
+  },
+  deleteStadium: async (stadiumId: number) => {
+    await apiClient.delete(`/admin/stadiums/${stadiumId}`);
   },
 };
