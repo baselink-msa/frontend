@@ -1,4 +1,4 @@
-export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'FAILED';
+export type ReservationStatus = 'PENDING' | 'CONFIRMED' | 'FAILED' | 'CANCELED';
 
 export type ReservationRequest = {
   gameId: number;
