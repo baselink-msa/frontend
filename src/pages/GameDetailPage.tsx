@@ -46,7 +46,11 @@ export function GameDetailPage() {
 
   const ticketOpenTime = new Date(game.ticketOpenTime).getTime();
   const remainingMs = Math.max(ticketOpenTime - now, 0);
-  const isTicketOpen = remainingMs === 0 || game.status === 'TICKET_OPEN';
+  const effectiveStatus =
+    game.status === 'SCHEDULED' && remainingMs === 0
+      ? 'TICKET_OPEN'
+      : game.status;
+  const isTicketOpen = effectiveStatus === 'TICKET_OPEN';
   const countdown = formatCountdown(remainingMs);
 
   return (
@@ -59,7 +63,7 @@ export function GameDetailPage() {
               {game.homeTeamName} vs {game.awayTeamName}
             </h1>
           </div>
-          <StatusBadge status={game.status} />
+          <StatusBadge status={effectiveStatus} />
         </div>
         <dl className="mt-8 grid gap-4 sm:grid-cols-2">
           <Info label="경기 시작" value={formatDateTime(game.gameStartTime)} />

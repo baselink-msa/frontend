@@ -6,7 +6,7 @@ import { ticketApi } from '../api/ticketApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { formatDateTime } from '../utils/date';
+import { formatDateTime, formatServerDateTime } from '../utils/date';
 
 const PAGE_SIZE = 5;
 
@@ -68,9 +68,13 @@ export function MyTicketsPage() {
                 <p className="mt-1 text-sm font-semibold text-slate-600">{ticket.stadiumName}</p>
               ) : null}
               <p className="mt-2 text-sm font-bold text-blue-700">{ticket.seatName}</p>
-              <p className="mt-1 text-xs text-slate-500">
-                예매 #{ticket.reservationId} · {formatDateTime(ticket.gameStartTime)}
-              </p>
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                <span>예매 #{ticket.reservationId}</span>
+                <span>경기 시작 {formatDateTime(ticket.gameStartTime)}</span>
+                {ticket.reservationCreatedAt ? (
+                  <span>예매 일시 {formatServerDateTime(ticket.reservationCreatedAt)}</span>
+                ) : null}
+              </div>
             </div>
             <StatusBadge status={ticket.status} />
             <div className="flex flex-wrap gap-2">

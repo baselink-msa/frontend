@@ -204,6 +204,7 @@ export const mockApi = {
             homeTeamName: game.homeTeamName,
             awayTeamName: game.awayTeamName,
             gameStartTime: game.gameStartTime,
+            reservationCreatedAt: detail.createdAt,
             seatName: detail.seatName,
             status: 'CONFIRMED',
           });
@@ -221,6 +222,7 @@ export const mockApi = {
           homeTeamName: 'KIA Tigers',
           awayTeamName: 'LG Twins',
           gameStartTime: '2026-06-01T18:30:00+09:00',
+          reservationCreatedAt: '2026-05-28T10:30:00Z',
           seatName: 'A-1',
           status: 'CONFIRMED',
         },

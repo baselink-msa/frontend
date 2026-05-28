@@ -142,6 +142,7 @@ export const ticketApi = {
         awayTeamName: detail.awayTeamName ?? '',
         stadiumName: detail.stadiumName,
         gameStartTime: detail.gameStartTime ?? withUtcOffsetIfMissing(r.createdAt),
+        reservationCreatedAt: r.createdAt,
         seatName: detail.seatName,
         status: r.status,
       };

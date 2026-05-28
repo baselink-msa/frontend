@@ -34,6 +34,7 @@ export type MyTicket = {
   awayTeamName: string;
   stadiumName?: string;
   gameStartTime: string;
+  reservationCreatedAt?: string;
   seatName: string;
   status: ReservationStatus;
 };
