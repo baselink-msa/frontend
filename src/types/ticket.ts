@@ -28,6 +28,8 @@ export type ReservationDetail = ReservationCreated & {
 export type MyTicket = {
   reservationId: number;
   gameId: number;
+  seatId: number;
+  lockId?: string;
   homeTeamName: string;
   awayTeamName: string;
   stadiumName?: string;

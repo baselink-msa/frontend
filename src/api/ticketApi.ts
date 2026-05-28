@@ -1,6 +1,6 @@
 import { mockApi } from '../mocks/mockApi';
 import type { ApiResponse } from '../types/common';
-import type { GameDetail } from '../types/game';
+import type { GameSummary } from '../types/game';
 import type { GameSeat } from '../types/seat';
 import type { MyTicket, ReservationCreated, ReservationDetail, ReservationRequest } from '../types/ticket';
 import { formatFallbackSeatLabel, formatSeatLabel } from '../utils/seat';
@@ -25,18 +25,35 @@ const unwrapApiData = <T>(value: T | ApiResponse<T> | undefined | null): T | nul
   return value as T;
 };
 
+const unwrapApiArray = <T>(value: T[] | ApiResponse<T[]> | undefined | null): T[] => {
+  const data = unwrapApiData<T[]>(value);
+  return Array.isArray(data) ? data : [];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+type GameLike = Partial<GameSummary> & { stadium?: { name?: string } };
+
+const isGameLike = (value: unknown): value is GameLike =>
+  isRecord(value) && ('homeTeamName' in value || 'awayTeamName' in value || 'stadium' in value || 'stadiumName' in value);
+
+const withUtcOffsetIfMissing = (value: string) =>
+  /([zZ]|[+-]\d{2}:?\d{2})$/.test(value) ? value : `${value}Z`;
+
 const enrichReservation = async (reservation: BackendReservation): Promise<ReservationDetail> => {
-  const [gameResponse, seatsResponse] = await Promise.allSettled([
-    gameApi.getGame(reservation.gameId),
+  const [gamesResponse, seatsResponse] = await Promise.allSettled([
+    gameApi.getGames(),
     gameApi.getSeats(reservation.gameId),
   ]);
-  const game = gameResponse.status === 'fulfilled'
-    ? unwrapApiData<GameDetail>(gameResponse.value)
-    : null;
-  const seats = seatsResponse.status === 'fulfilled'
-    ? unwrapApiData<GameSeat[]>(seatsResponse.value) ?? []
+  const games = gamesResponse.status === 'fulfilled'
+    ? unwrapApiArray<unknown>(gamesResponse.value).filter(isGameLike)
     : [];
+  const game = games.find((item) => item.gameId === reservation.gameId) ?? null;
+  const seats = seatsResponse.status === 'fulfilled' ? unwrapApiArray<GameSeat>(seatsResponse.value) : [];
   const seat = seats.find((item) => item.seatId === reservation.seatId);
+
+  const stadiumName = game?.stadiumName ?? game?.stadium?.name;
 
   const detail: ReservationDetail = {
     reservationId: reservation.reservationId,
@@ -45,7 +62,7 @@ const enrichReservation = async (reservation: BackendReservation): Promise<Reser
     seatName: seat ? formatSeatLabel(seat) : formatFallbackSeatLabel(undefined, reservation.seatId),
     homeTeamName: game?.homeTeamName,
     awayTeamName: game?.awayTeamName,
-    stadiumName: game?.stadium.name,
+    stadiumName,
     gameStartTime: game?.gameStartTime,
     status: reservation.status,
     createdAt: reservation.createdAt,
@@ -119,10 +136,12 @@ export const ticketApi = {
       return {
         reservationId: r.reservationId,
         gameId: r.gameId,
+        seatId: r.seatId,
+        lockId: r.lockId,
         homeTeamName: detail.homeTeamName ?? '',
         awayTeamName: detail.awayTeamName ?? '',
         stadiumName: detail.stadiumName,
-        gameStartTime: detail.gameStartTime ?? r.createdAt,
+        gameStartTime: detail.gameStartTime ?? withUtcOffsetIfMissing(r.createdAt),
         seatName: detail.seatName,
         status: r.status,
       };

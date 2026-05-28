@@ -3,12 +3,24 @@ const parseDateTime = (value: string) => {
   return new Date(`${value}+09:00`);
 };
 
+const parseServerDateTime = (value: string) => {
+  if (/([zZ]|[+-]\d{2}:?\d{2})$/.test(value)) return new Date(value);
+  return new Date(`${value}Z`);
+};
+
 export const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat('ko-KR', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Seoul',
   }).format(parseDateTime(value));
+
+export const formatServerDateTime = (value: string) =>
+  new Intl.DateTimeFormat('ko-KR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Seoul',
+  }).format(parseServerDateTime(value));
 
 export const formatSeconds = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);

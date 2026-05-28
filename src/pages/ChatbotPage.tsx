@@ -16,14 +16,15 @@ export function ChatbotPage() {
   const sendMutation = useMutation({
     mutationFn: chatbotApi.sendMessage,
     onSuccess: (response) => {
+      const answer = response.data?.answer || '지금은 답변을 불러오지 못했습니다. 등록된 FAQ를 선택하거나 잠시 후 다시 시도해 주세요.';
       setMessages((prev) => [
         ...prev,
         {
           id: `assistant-${Date.now()}`,
           role: 'assistant',
-          text: response.data.answer,
-          source: response.data.source,
-          cached: response.data.cached,
+          text: answer,
+          source: response.data?.source ?? 'FALLBACK',
+          cached: response.data?.cached ?? false,
         },
       ]);
       setError('');
