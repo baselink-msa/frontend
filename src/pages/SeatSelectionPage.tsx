@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 import { seatLockApi } from '../api/seatLockApi';
@@ -145,18 +146,32 @@ export function SeatSelectionPage() {
             <p className="text-sm font-bold text-blue-700">Seat Selection</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-950">좌석 선택</h1>
           </div>
-          <select
-            value={sectionId ?? ''}
-            onChange={(event) => setSectionId(event.target.value ? Number(event.target.value) : undefined)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
-          >
-            <option value="">전체 구역</option>
-            {(Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : []).map((section) => (
-              <option key={section.sectionId} value={section.sectionId}>
-                {section.sectionName}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setLockedSeatIds(new Set());
+                seatsQuery.refetch();
+              }}
+              disabled={seatsQuery.isFetching}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={seatsQuery.isFetching ? 'animate-spin' : ''} />
+              새로고침
+            </button>
+            <select
+              value={sectionId ?? ''}
+              onChange={(event) => setSectionId(event.target.value ? Number(event.target.value) : undefined)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
+            >
+              <option value="">전체 구역</option>
+              {(Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : []).map((section) => (
+                <option key={section.sectionId} value={section.sectionId}>
+                  {section.sectionName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <ErrorMessage message={error || seatsQuery.error?.message} />
         <div className="mt-4">
@@ -197,12 +212,12 @@ export function SeatSelectionPage() {
 
 function BlockedSeatAccess({ title, description, to, label }: { title: string; description: string; to: string; label: string }) {
   return (
-    <section className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-soft">
-      <h1 className="text-2xl font-bold text-slate-950">{title}</h1>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    <section className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white px-6 py-10 text-center shadow-soft sm:px-10">
+      <h1 className="text-2xl font-bold leading-tight text-slate-950">{title}</h1>
+      <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-slate-600">{description}</p>
       <Link
         to={to}
-        className="mt-6 rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
+        className="mt-8 inline-flex min-h-11 items-center justify-center rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
       >
         {label}
       </Link>
