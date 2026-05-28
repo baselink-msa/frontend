@@ -1,5 +1,7 @@
 import { mockApi } from '../mocks/mockApi';
 import type { ApiResponse } from '../types/common';
+import type { GameDetail } from '../types/game';
+import type { GameSeat } from '../types/seat';
 import type { MyTicket, ReservationCreated, ReservationDetail, ReservationRequest } from '../types/ticket';
 import { formatFallbackSeatLabel, formatSeatLabel } from '../utils/seat';
 import { apiClient, toApiResponse, USE_MOCK } from './client';
@@ -17,15 +19,24 @@ type BackendReservation = {
   updatedAt: string;
 };
 
+const unwrapApiData = <T>(value: T | ApiResponse<T> | undefined | null): T | null => {
+  if (!value) return null;
+  if (typeof value === 'object' && 'data' in value) return (value as ApiResponse<T>).data;
+  return value as T;
+};
+
 const enrichReservation = async (reservation: BackendReservation): Promise<ReservationDetail> => {
   const [gameResponse, seatsResponse] = await Promise.allSettled([
     gameApi.getGame(reservation.gameId),
     gameApi.getSeats(reservation.gameId),
   ]);
-  const game = gameResponse.status === 'fulfilled' ? gameResponse.value.data : null;
-  const seat = seatsResponse.status === 'fulfilled'
-    ? seatsResponse.value.data.find((item) => item.seatId === reservation.seatId)
+  const game = gameResponse.status === 'fulfilled'
+    ? unwrapApiData<GameDetail>(gameResponse.value)
     : null;
+  const seats = seatsResponse.status === 'fulfilled'
+    ? unwrapApiData<GameSeat[]>(seatsResponse.value) ?? []
+    : [];
+  const seat = seats.find((item) => item.seatId === reservation.seatId);
 
   const detail: ReservationDetail = {
     reservationId: reservation.reservationId,
