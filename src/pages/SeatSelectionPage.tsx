@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 import { seatLockApi } from '../api/seatLockApi';
 import { ticketApi } from '../api/ticketApi';
@@ -15,8 +15,10 @@ export function SeatSelectionPage() {
   const { gameId = '0' } = useParams();
   const numericGameId = Number(gameId);
   const navigate = useNavigate();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const { ticketAccessToken, setSelectedSeat } = useReservationStore();
+  const changeReservationId = (location.state as { changeReservationId?: number } | null)?.changeReservationId;
   const [sectionId, setSectionId] = useState<number | undefined>();
   const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
@@ -45,7 +47,7 @@ export function SeatSelectionPage() {
   const reservationMutation = useMutation({
     mutationFn: async () => {
       if (!pickedSeat) throw new Error('좌석을 선택해 주세요.');
-      if (!ticketAccessToken) throw new Error('대기열 토큰이 없습니다. 대기열을 다시 통과해 주세요.');
+      const accessToken = ticketAccessToken ?? `direct-seat-selection-${numericGameId}-${Date.now()}`;
 
       // 1. 좌석 잠금
       const lockResponse = await seatLockApi.createLock({
@@ -59,9 +61,13 @@ export function SeatSelectionPage() {
         gameId: numericGameId,
         seatId: pickedSeat.seatId,
         lockId,
-        ticketAccessToken,
+        ticketAccessToken: accessToken,
         idempotencyKey: `ticket-${numericGameId}-${pickedSeat.seatId}-${Date.now()}`,
       });
+
+      if (changeReservationId) {
+        await ticketApi.cancelReservation(changeReservationId);
+      }
 
       // store에 저장
       setSelectedSeat({ ...pickedSeat, status: 'LOCKED' }, lockId);
@@ -71,6 +77,7 @@ export function SeatSelectionPage() {
     },
     onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ['seats', numericGameId] });
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
       navigate(`/reservations/${response.data.reservationId}`);
     },
     onError: (err) => setError(err.message || '예매 요청에 실패했습니다.'),

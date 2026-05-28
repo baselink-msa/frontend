@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -15,7 +16,6 @@ export function OrderPage() {
   const [error, setError] = useState('');
 
   const menusQuery = useQuery({ queryKey: ['menus'], queryFn: orderApi.getMenus });
-  const canCreateOrder = Boolean(selectedGame && selectedSeat);
 
   const items = useMemo(
     () =>
@@ -45,7 +45,7 @@ export function OrderPage() {
     <section className="grid gap-6 lg:grid-cols-[1fr_320px]">
       <div>
         <h1 className="text-3xl font-bold text-slate-950">주류 주문</h1>
-        <p className="mt-2 text-slate-600">예매 과정에서 선택한 경기와 좌석 기준으로 주문을 생성합니다.</p>
+        <p className="mt-2 text-slate-600">원하는 메뉴와 수량을 선택한 뒤 주문을 생성하세요.</p>
         <div className="mt-5">
           <ErrorMessage message={error || menusQuery.error?.message} />
         </div>
@@ -76,18 +76,20 @@ export function OrderPage() {
       </div>
       <aside className="h-fit rounded-lg border border-slate-200 bg-white p-5 shadow-soft">
         <h2 className="text-lg font-bold text-slate-950">주문 요약</h2>
-        {canCreateOrder ? (
-          <p className="mt-3 text-sm text-slate-600">
-            경기 ID {selectedGame?.gameId}, 좌석 ID {selectedSeat?.seatId}
-          </p>
-        ) : (
-          <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">
-            경기와 좌석을 먼저 선택한 뒤 주문할 수 있습니다.
-          </p>
-        )}
+        <p className="mt-3 text-sm text-slate-600">
+          선택한 메뉴 {items.length}개
+        </p>
+        <p className="mt-1 text-2xl font-black text-slate-950">
+          {formatCurrency(
+            items.reduce((sum, item) => {
+              const menu = menusQuery.data?.data.find((candidate) => candidate.menuId === item.menuId);
+              return sum + (menu?.price ?? 0) * item.quantity;
+            }, 0),
+          )}
+        </p>
         <button
           type="button"
-          disabled={!canCreateOrder || items.length === 0 || orderMutation.isPending}
+          disabled={items.length === 0 || orderMutation.isPending}
           onClick={() => orderMutation.mutate()}
           className="mt-5 w-full rounded-md bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800 disabled:opacity-50"
         >
@@ -98,6 +100,12 @@ export function OrderPage() {
             주문 #{result.orderId} · {result.status} · {formatCurrency(result.totalPrice)}
           </div>
         ) : null}
+        <Link
+          to="/orders/my"
+          className="mt-3 block rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-center text-sm font-bold text-blue-800 hover:bg-blue-100"
+        >
+          주문 내역 확인
+        </Link>
       </aside>
     </section>
   );

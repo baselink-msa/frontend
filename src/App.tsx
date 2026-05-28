@@ -9,6 +9,7 @@ import { HomePage } from './pages/HomePage';
 import { LoginPage } from './pages/LoginPage';
 import { MyTicketsPage } from './pages/MyTicketsPage';
 import { OrderPage } from './pages/OrderPage';
+import { OrderHistoryPage } from './pages/OrderHistoryPage';
 import { ReservationResultPage } from './pages/ReservationResultPage';
 import { SeatSelectionPage } from './pages/SeatSelectionPage';
 import { SignupPage } from './pages/SignupPage';
@@ -74,6 +75,14 @@ export function App() {
           element={
             <RequireAuth>
               <OrderPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/orders/my"
+          element={
+            <RequireAuth>
+              <OrderHistoryPage />
             </RequireAuth>
           }
         />

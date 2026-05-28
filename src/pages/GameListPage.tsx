@@ -19,6 +19,11 @@ const statusLabels: Record<GameStatus, string> = {
 
 type ViewMode = 'grid' | 'list' | 'date';
 
+const getEffectiveStatus = (game: GameSummary): GameStatus =>
+  game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
+    ? 'TICKET_OPEN'
+    : game.status;
+
 export function GameListPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['games'],
@@ -33,7 +38,7 @@ export function GameListPage() {
   const games = data?.data ?? [];
 
   const stadiums = useMemo(() => {
-    const set = new Set(games.map((g) => g.stadiumName));
+    const set = new Set(games.map((g) => g.stadiumName).filter(Boolean));
     return Array.from(set).sort();
   }, [games]);
 
@@ -41,7 +46,7 @@ export function GameListPage() {
     let result: GameSummary[] = games;
 
     if (statusFilter) {
-      result = result.filter((g) => g.status === statusFilter);
+      result = result.filter((g) => getEffectiveStatus(g) === statusFilter);
     }
     if (stadiumFilter) {
       result = result.filter((g) => g.stadiumName === stadiumFilter);
@@ -52,7 +57,7 @@ export function GameListPage() {
         (g) =>
           g.homeTeamName.toLowerCase().includes(q) ||
           g.awayTeamName.toLowerCase().includes(q) ||
-          g.stadiumName.toLowerCase().includes(q),
+          g.stadiumName?.toLowerCase().includes(q),
       );
     }
 
@@ -63,7 +68,12 @@ export function GameListPage() {
   const dateGroups = useMemo(() => {
     const map = new Map<string, GameSummary[]>();
     for (const game of filtered) {
-      const dateKey = game.gameStartTime.slice(0, 10); // YYYY-MM-DD
+      const dateKey = new Intl.DateTimeFormat('sv-SE', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(game.gameStartTime));
       if (!map.has(dateKey)) map.set(dateKey, []);
       map.get(dateKey)!.push(game);
     }
@@ -209,10 +219,7 @@ export function GameListPage() {
 }
 
 function GameListItem({ game }: { game: GameSummary }) {
-  const effectiveStatus =
-    game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
-      ? 'TICKET_OPEN'
-      : game.status;
+  const effectiveStatus = getEffectiveStatus(game);
 
   return (
     <Link

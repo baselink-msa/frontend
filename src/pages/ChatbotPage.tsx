@@ -28,7 +28,18 @@ export function ChatbotPage() {
       ]);
       setError('');
     },
-    onError: (err) => setError(err.message || '챗봇 응답에 실패했습니다.'),
+    onError: (err) => {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          text: '지금은 답변을 불러오지 못했습니다. 잠시 후 다시 시도하거나 등록된 FAQ를 선택해 주세요.',
+          source: 'FALLBACK',
+        },
+      ]);
+      setError(err.message || '챗봇 응답에 실패했습니다.');
+    },
   });
 
   const handleSubmit = (event: FormEvent) => {
