@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { seatLockApi } from '../api/seatLockApi';
 import { ticketApi } from '../api/ticketApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -18,8 +19,21 @@ export function MyTicketsPage() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: (reservationId: number) => ticketApi.cancelReservation(reservationId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['my-tickets'] }),
+    mutationFn: async (ticket: { gameId: number; seatId: number; lockId?: string; reservationId: number }) => {
+      const result = await ticketApi.cancelReservation(ticket.reservationId);
+      if (ticket.lockId) {
+        await seatLockApi.releaseLock({
+          gameId: ticket.gameId,
+          seatId: ticket.seatId,
+          lockId: ticket.lockId,
+        }).catch(() => undefined);
+      }
+      return result;
+    },
+    onSuccess: (_response, ticket) => {
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['seats', ticket.gameId] });
+    },
   });
 
   const tickets = data?.data ?? [];
@@ -80,7 +94,7 @@ export function MyTicketsPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      if (confirm('예매를 취소하시겠습니까?')) cancelMutation.mutate(ticket.reservationId);
+                      if (confirm('예매를 취소하시겠습니까?')) cancelMutation.mutate(ticket);
                     }}
                     disabled={cancelMutation.isPending}
                     className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"

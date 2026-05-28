@@ -200,6 +200,7 @@ export const mockApi = {
           myTickets.push({
             reservationId,
             gameId: detail.gameId,
+            seatId: detail.seatId,
             homeTeamName: game.homeTeamName,
             awayTeamName: game.awayTeamName,
             gameStartTime: game.gameStartTime,
@@ -216,6 +217,7 @@ export const mockApi = {
         {
           reservationId: 1,
           gameId: 1,
+          seatId: 1001,
           homeTeamName: 'KIA Tigers',
           awayTeamName: 'LG Twins',
           gameStartTime: '2026-06-01T18:30:00+09:00',

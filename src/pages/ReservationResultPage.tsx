@@ -6,7 +6,7 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useReservationStore } from '../store/reservationStore';
-import { formatDateTime } from '../utils/date';
+import { formatDateTime, formatServerDateTime } from '../utils/date';
 import { useState } from 'react';
 
 export function ReservationResultPage() {
@@ -34,8 +34,16 @@ export function ReservationResultPage() {
 
   const cancelMutation = useMutation({
     mutationFn: () => ticketApi.cancelReservation(numericReservationId),
-    onSuccess: () => {
+    onSuccess: async () => {
+      if (selectedSeat && lockId && selectedGame) {
+        await seatLockApi.releaseLock({
+          gameId: selectedGame.gameId,
+          seatId: selectedSeat.seatId,
+          lockId,
+        }).catch(() => undefined);
+      }
       queryClient.invalidateQueries({ queryKey: ['reservation', numericReservationId] });
+      if (selectedGame) queryClient.invalidateQueries({ queryKey: ['seats', selectedGame.gameId] });
       resetReservationFlow();
       setError('');
     },
@@ -101,7 +109,7 @@ export function ReservationResultPage() {
           {reservation.stadiumName ? <Info label="구장" value={reservation.stadiumName} /> : null}
           <Info label="예매 번호" value={String(reservation.reservationId)} />
           <Info label="좌석" value={reservation.seatName} />
-          <Info label="생성 시간" value={formatDateTime(reservation.createdAt)} />
+          <Info label="생성 시간" value={formatServerDateTime(reservation.createdAt)} />
           <Info label="상태" value={reservation.status} />
         </dl>
       ) : null}

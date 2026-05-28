@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate } from 'react-router-dom';
 import { orderApi } from '../api/orderApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
@@ -9,6 +9,8 @@ import type { Order } from '../types/order';
 import { formatCurrency } from '../utils/format';
 
 export function OrderPage() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const selectedGame = useReservationStore((state) => state.selectedGame);
   const selectedSeat = useReservationStore((state) => state.selectedSeat);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -34,7 +36,9 @@ export function OrderPage() {
       }),
     onSuccess: (response) => {
       setResult(response.data);
+      queryClient.invalidateQueries({ queryKey: ['my-orders'] });
       setError('');
+      navigate('/orders/my');
     },
     onError: (err) => setError(err.message || '주문 생성에 실패했습니다.'),
   });
