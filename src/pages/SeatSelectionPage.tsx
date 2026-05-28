@@ -197,12 +197,12 @@ export function SeatSelectionPage() {
 
 function BlockedSeatAccess({ title, description, to, label }: { title: string; description: string; to: string; label: string }) {
   return (
-    <section className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-soft">
-      <h1 className="text-2xl font-bold text-slate-950">{title}</h1>
-      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    <section className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white px-6 py-10 text-center shadow-soft sm:px-10">
+      <h1 className="text-2xl font-bold leading-tight text-slate-950">{title}</h1>
+      <p className="mx-auto mt-4 max-w-md text-sm leading-7 text-slate-600">{description}</p>
       <Link
         to={to}
-        className="mt-6 rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
+        className="mt-8 inline-flex min-h-11 items-center justify-center rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
       >
         {label}
       </Link>
