@@ -51,6 +51,18 @@ export function OrderHistoryPage() {
                 <p className="mt-1 text-sm text-slate-500">
                   {order.createdAt ? formatDateTime(order.createdAt) : '주문 시간 확인 중'}
                 </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {order.items.length ? order.items.map((item) => (
+                    <span
+                      key={`${order.orderId}-${item.menuId}`}
+                      className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-700"
+                    >
+                      {item.name} {item.quantity}개
+                    </span>
+                  )) : (
+                    <span className="text-xs font-semibold text-slate-400">주문 품목 확인 중</span>
+                  )}
+                </div>
               </div>
               <div className="text-left sm:text-right">
                 <p className="font-black text-slate-950">{formatCurrency(order.totalPrice)}</p>

@@ -14,10 +14,20 @@ export const orderApi = {
     const { data } = await apiClient.post<ApiResponse<Order>>('/orders', request);
     return data;
   },
-  getMyOrders: async (): Promise<ApiResponse<Order[]>> => {
+  getMyOrders: async (): Promise<ApiResponse<OrderDetail[]>> => {
     if (USE_MOCK) return { success: true, data: [], message: '요청이 성공했습니다.' };
     const { data } = await apiClient.get<ApiResponse<Order[]>>('/orders/my');
-    return data;
+    const details = await Promise.all(
+      data.data.map(async (order) => {
+        try {
+          const detail = await orderApi.getOrder(order.orderId);
+          return detail.data;
+        } catch {
+          return { ...order, gameId: 0, seatId: 0, items: [] };
+        }
+      }),
+    );
+    return { ...data, data: details };
   },
   getOrder: async (orderId: number): Promise<ApiResponse<OrderDetail>> => {
     const { data } = await apiClient.get<ApiResponse<OrderDetail>>(`/orders/${orderId}`);
