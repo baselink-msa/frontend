@@ -7,7 +7,7 @@ const navItems = [
   { to: '/', label: '홈' },
   { to: '/games', label: '경기' },
   { to: '/my-tickets', label: '내 예매', auth: true },
-  { to: '/orders', label: '주문', auth: true },
+  { to: '/orders', label: '주문', auth: true, end: true },
   { to: '/orders/my', label: '주문내역', auth: true },
   { to: '/chatbot', label: '챗봇' },
   { to: '/admin', label: '관리자', admin: true },
@@ -45,6 +45,7 @@ export function Header() {
             <NavLink
               key={item.to}
               to={item.to}
+              end={'end' in item ? item.end : item.to === '/'}
               className={({ isActive }) =>
                 `rounded-md px-3 py-2 text-sm font-semibold transition ${
                   isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-100'

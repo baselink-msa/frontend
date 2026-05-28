@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 import { seatLockApi } from '../api/seatLockApi';
 import { ticketApi } from '../api/ticketApi';
@@ -23,20 +23,27 @@ export function SeatSelectionPage() {
   const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
 
+  const gameQuery = useQuery({
+    queryKey: ['game', numericGameId],
+    queryFn: () => gameApi.getGame(numericGameId),
+    enabled: Boolean(numericGameId),
+  });
   const sectionsQuery = useQuery({
     queryKey: ['seat-sections', numericGameId],
     queryFn: () => gameApi.getSeatSections(numericGameId),
+    enabled: Boolean(ticketAccessToken || changeReservationId),
   });
   const seatsQuery = useQuery({
     queryKey: ['seats', numericGameId, sectionId],
     queryFn: () => gameApi.getSeats(numericGameId, { sectionId }),
+    enabled: Boolean(ticketAccessToken || changeReservationId),
   });
 
   // 로컬에서 잠금된 좌석 추적 (Redis 잠금이 DB에 반영 안 되므로)
   const [lockedSeatIds, setLockedSeatIds] = useState<Set<number>>(new Set());
 
   const displaySeats = useMemo(() => {
-    const seats = seatsQuery.data?.data ?? [];
+    const seats = Array.isArray(seatsQuery.data?.data) ? seatsQuery.data.data : [];
     if (lockedSeatIds.size === 0) return seats;
     return seats.map((seat) =>
       lockedSeatIds.has(seat.seatId) ? { ...seat, status: 'LOCKED' as const } : seat,
@@ -47,7 +54,10 @@ export function SeatSelectionPage() {
   const reservationMutation = useMutation({
     mutationFn: async () => {
       if (!pickedSeat) throw new Error('좌석을 선택해 주세요.');
-      const accessToken = ticketAccessToken ?? `direct-seat-selection-${numericGameId}-${Date.now()}`;
+      if (!ticketAccessToken && !changeReservationId) {
+        throw new Error('대기열 입장 후 좌석을 선택할 수 있습니다.');
+      }
+      const accessToken = ticketAccessToken ?? `seat-change-${numericGameId}-${Date.now()}`;
 
       // 1. 좌석 잠금
       const lockResponse = await seatLockApi.createLock({
@@ -84,9 +94,45 @@ export function SeatSelectionPage() {
   });
 
   const selectedSection = useMemo(
-    () => sectionsQuery.data?.data.find((section) => section.sectionId === pickedSeat?.sectionId),
+    () => {
+      const sections = Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : [];
+      return sections.find((section) => section.sectionId === pickedSeat?.sectionId);
+    },
     [sectionsQuery.data, pickedSeat],
   );
+
+  if (gameQuery.isLoading) return <Loading label="경기 정보를 확인하는 중입니다." />;
+
+  const game = gameQuery.data?.data;
+  const ticketOpenTime = game ? new Date(game.ticketOpenTime).getTime() : 0;
+  const isTicketOpen = game ? game.status === 'TICKET_OPEN' || ticketOpenTime <= Date.now() : false;
+  const hasSeatAccess = Boolean(ticketAccessToken || changeReservationId);
+
+  if (!game) {
+    return <BlockedSeatAccess title="경기 정보를 찾을 수 없습니다." description={gameQuery.error?.message ?? '경기 목록에서 다시 선택해 주세요.'} to="/games" label="경기 목록으로" />;
+  }
+
+  if (!isTicketOpen) {
+    return (
+      <BlockedSeatAccess
+        title="아직 예매 오픈 전입니다."
+        description={`예매 오픈: ${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' }).format(new Date(game.ticketOpenTime))}`}
+        to={`/games/${numericGameId}`}
+        label="경기 상세로"
+      />
+    );
+  }
+
+  if (!hasSeatAccess) {
+    return (
+      <BlockedSeatAccess
+        title="대기열 입장이 필요합니다."
+        description="좌석 선택은 예매하기 버튼을 눌러 대기열을 통과한 뒤 이용할 수 있습니다."
+        to={`/games/${numericGameId}`}
+        label="경기 상세로"
+      />
+    );
+  }
 
   if (sectionsQuery.isLoading || seatsQuery.isLoading) return <Loading label="좌석 정보를 불러오는 중입니다." />;
 
@@ -104,7 +150,7 @@ export function SeatSelectionPage() {
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
           >
             <option value="">전체 구역</option>
-            {sectionsQuery.data?.data.map((section) => (
+            {(Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : []).map((section) => (
               <option key={section.sectionId} value={section.sectionId}>
                 {section.sectionName}
               </option>
@@ -144,6 +190,21 @@ export function SeatSelectionPage() {
           {reservationMutation.isPending ? '예매 처리 중...' : '예매 요청'}
         </button>
       </aside>
+    </section>
+  );
+}
+
+function BlockedSeatAccess({ title, description, to, label }: { title: string; description: string; to: string; label: string }) {
+  return (
+    <section className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-soft">
+      <h1 className="text-2xl font-bold text-slate-950">{title}</h1>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+      <Link
+        to={to}
+        className="mt-6 rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
+      >
+        {label}
+      </Link>
     </section>
   );
 }
