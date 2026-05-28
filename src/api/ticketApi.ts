@@ -30,20 +30,25 @@ const unwrapApiArray = <T>(value: T[] | ApiResponse<T[]> | undefined | null): T[
   return Array.isArray(data) ? data : [];
 };
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isGameLike = (value: unknown): value is Partial<GameDetail> & { stadiumName?: string } =>
+  isRecord(value) && ('homeTeamName' in value || 'awayTeamName' in value || 'stadium' in value || 'stadiumName' in value);
+
 const enrichReservation = async (reservation: BackendReservation): Promise<ReservationDetail> => {
   const [gameResponse, seatsResponse] = await Promise.allSettled([
     gameApi.getGame(reservation.gameId),
     gameApi.getSeats(reservation.gameId),
   ]);
-  const game = gameResponse.status === 'fulfilled'
+  const gameCandidate = gameResponse.status === 'fulfilled'
     ? unwrapApiData<GameDetail>(gameResponse.value)
     : null;
+  const game = isGameLike(gameCandidate) ? gameCandidate : null;
   const seats = seatsResponse.status === 'fulfilled' ? unwrapApiArray<GameSeat>(seatsResponse.value) : [];
   const seat = seats.find((item) => item.seatId === reservation.seatId);
 
-  const stadiumName = 'stadiumName' in (game ?? {})
-    ? (game as { stadiumName?: string }).stadiumName
-    : game?.stadium?.name;
+  const stadiumName = game?.stadiumName ?? game?.stadium?.name;
 
   const detail: ReservationDetail = {
     reservationId: reservation.reservationId,
