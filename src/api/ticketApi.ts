@@ -25,6 +25,11 @@ const unwrapApiData = <T>(value: T | ApiResponse<T> | undefined | null): T | nul
   return value as T;
 };
 
+const unwrapApiArray = <T>(value: T[] | ApiResponse<T[]> | undefined | null): T[] => {
+  const data = unwrapApiData<T[]>(value);
+  return Array.isArray(data) ? data : [];
+};
+
 const enrichReservation = async (reservation: BackendReservation): Promise<ReservationDetail> => {
   const [gameResponse, seatsResponse] = await Promise.allSettled([
     gameApi.getGame(reservation.gameId),
@@ -33,9 +38,7 @@ const enrichReservation = async (reservation: BackendReservation): Promise<Reser
   const game = gameResponse.status === 'fulfilled'
     ? unwrapApiData<GameDetail>(gameResponse.value)
     : null;
-  const seats = seatsResponse.status === 'fulfilled'
-    ? unwrapApiData<GameSeat[]>(seatsResponse.value) ?? []
-    : [];
+  const seats = seatsResponse.status === 'fulfilled' ? unwrapApiArray<GameSeat>(seatsResponse.value) : [];
   const seat = seats.find((item) => item.seatId === reservation.seatId);
 
   const detail: ReservationDetail = {
