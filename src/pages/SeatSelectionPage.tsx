@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 import { seatLockApi } from '../api/seatLockApi';
@@ -145,18 +146,32 @@ export function SeatSelectionPage() {
             <p className="text-sm font-bold text-blue-700">Seat Selection</p>
             <h1 className="mt-2 text-3xl font-bold text-slate-950">좌석 선택</h1>
           </div>
-          <select
-            value={sectionId ?? ''}
-            onChange={(event) => setSectionId(event.target.value ? Number(event.target.value) : undefined)}
-            className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
-          >
-            <option value="">전체 구역</option>
-            {(Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : []).map((section) => (
-              <option key={section.sectionId} value={section.sectionId}>
-                {section.sectionName}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setLockedSeatIds(new Set());
+                seatsQuery.refetch();
+              }}
+              disabled={seatsQuery.isFetching}
+              className="inline-flex items-center gap-2 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              <RefreshCw size={16} className={seatsQuery.isFetching ? 'animate-spin' : ''} />
+              새로고침
+            </button>
+            <select
+              value={sectionId ?? ''}
+              onChange={(event) => setSectionId(event.target.value ? Number(event.target.value) : undefined)}
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-semibold"
+            >
+              <option value="">전체 구역</option>
+              {(Array.isArray(sectionsQuery.data?.data) ? sectionsQuery.data.data : []).map((section) => (
+                <option key={section.sectionId} value={section.sectionId}>
+                  {section.sectionName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <ErrorMessage message={error || seatsQuery.error?.message} />
         <div className="mt-4">
