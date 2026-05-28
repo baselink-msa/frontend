@@ -17,8 +17,9 @@ export function SeatSelectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { ticketAccessToken, setSelectedSeat } = useReservationStore();
+  const { ticketAccessToken, ticketAccessGameId, setSelectedSeat } = useReservationStore();
   const changeReservationId = (location.state as { changeReservationId?: number } | null)?.changeReservationId;
+  const hasScopedTicketAccess = Boolean(ticketAccessToken && ticketAccessGameId === numericGameId);
   const [sectionId, setSectionId] = useState<number | undefined>();
   const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
@@ -31,12 +32,12 @@ export function SeatSelectionPage() {
   const sectionsQuery = useQuery({
     queryKey: ['seat-sections', numericGameId],
     queryFn: () => gameApi.getSeatSections(numericGameId),
-    enabled: Boolean(ticketAccessToken || changeReservationId),
+    enabled: Boolean(hasScopedTicketAccess || changeReservationId),
   });
   const seatsQuery = useQuery({
     queryKey: ['seats', numericGameId, sectionId],
     queryFn: () => gameApi.getSeats(numericGameId, { sectionId }),
-    enabled: Boolean(ticketAccessToken || changeReservationId),
+    enabled: Boolean(hasScopedTicketAccess || changeReservationId),
   });
 
   // 로컬에서 잠금된 좌석 추적 (Redis 잠금이 DB에 반영 안 되므로)
@@ -54,10 +55,10 @@ export function SeatSelectionPage() {
   const reservationMutation = useMutation({
     mutationFn: async () => {
       if (!pickedSeat) throw new Error('좌석을 선택해 주세요.');
-      if (!ticketAccessToken && !changeReservationId) {
+      if (!hasScopedTicketAccess && !changeReservationId) {
         throw new Error('대기열 입장 후 좌석을 선택할 수 있습니다.');
       }
-      const accessToken = ticketAccessToken ?? `seat-change-${numericGameId}-${Date.now()}`;
+      const accessToken = hasScopedTicketAccess ? ticketAccessToken! : `seat-change-${numericGameId}-${Date.now()}`;
 
       // 1. 좌석 잠금
       const lockResponse = await seatLockApi.createLock({
@@ -106,7 +107,7 @@ export function SeatSelectionPage() {
   const game = gameQuery.data?.data;
   const ticketOpenTime = game ? new Date(game.ticketOpenTime).getTime() : 0;
   const isTicketOpen = game ? game.status === 'TICKET_OPEN' || ticketOpenTime <= Date.now() : false;
-  const hasSeatAccess = Boolean(ticketAccessToken || changeReservationId);
+  const hasSeatAccess = Boolean(hasScopedTicketAccess || changeReservationId);
 
   if (!game) {
     return <BlockedSeatAccess title="경기 정보를 찾을 수 없습니다." description={gameQuery.error?.message ?? '경기 목록에서 다시 선택해 주세요.'} to="/games" label="경기 목록으로" />;
