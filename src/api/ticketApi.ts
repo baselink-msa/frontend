@@ -41,6 +41,10 @@ const enrichReservation = async (reservation: BackendReservation): Promise<Reser
   const seats = seatsResponse.status === 'fulfilled' ? unwrapApiArray<GameSeat>(seatsResponse.value) : [];
   const seat = seats.find((item) => item.seatId === reservation.seatId);
 
+  const stadiumName = 'stadiumName' in (game ?? {})
+    ? (game as { stadiumName?: string }).stadiumName
+    : game?.stadium?.name;
+
   const detail: ReservationDetail = {
     reservationId: reservation.reservationId,
     gameId: reservation.gameId,
@@ -48,7 +52,7 @@ const enrichReservation = async (reservation: BackendReservation): Promise<Reser
     seatName: seat ? formatSeatLabel(seat) : formatFallbackSeatLabel(undefined, reservation.seatId),
     homeTeamName: game?.homeTeamName,
     awayTeamName: game?.awayTeamName,
-    stadiumName: game?.stadium.name,
+    stadiumName,
     gameStartTime: game?.gameStartTime,
     status: reservation.status,
     createdAt: reservation.createdAt,
