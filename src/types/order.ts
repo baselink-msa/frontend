@@ -20,4 +20,18 @@ export type Order = {
   orderId: number;
   status: 'ORDERED' | 'DELIVERING' | 'DELIVERED' | 'CANCELLED';
   totalPrice: number;
+  createdAt?: string;
+};
+
+export type OrderItem = {
+  menuId: number;
+  name: string;
+  quantity: number;
+  price: number;
+};
+
+export type OrderDetail = Order & {
+  gameId: number;
+  seatId: number;
+  items: OrderItem[];
 };

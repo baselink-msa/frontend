@@ -54,10 +54,11 @@ export function ReservationResultPage() {
       }
       // 예매 취소
       await ticketApi.cancelReservation(numericReservationId);
-      resetReservationFlow();
+      setError('');
     },
     onSuccess: () => {
       if (selectedGame) navigate(`/games/${selectedGame.gameId}/seats`);
+      else if (data?.data?.gameId) navigate(`/games/${data.data.gameId}/seats`);
       else navigate('/games');
     },
     onError: (err) => setError(err.message),
@@ -94,6 +95,10 @@ export function ReservationResultPage() {
 
       {reservation ? (
         <dl className="mt-6 grid gap-3 text-left sm:grid-cols-2">
+          {reservation.homeTeamName && reservation.awayTeamName ? (
+            <Info label="경기" value={`${reservation.homeTeamName} vs ${reservation.awayTeamName}`} />
+          ) : null}
+          {reservation.stadiumName ? <Info label="구장" value={reservation.stadiumName} /> : null}
           <Info label="예매 번호" value={String(reservation.reservationId)} />
           <Info label="좌석" value={reservation.seatName} />
           <Info label="생성 시간" value={formatDateTime(reservation.createdAt)} />

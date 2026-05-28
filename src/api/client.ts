@@ -28,9 +28,9 @@ export const toApiResponse = <T>(data: T, message = '요청이 성공했습니�
   message,
 });
 
-const getFriendlyApiErrorMessage = (error: AxiosError<{ error?: { message?: string }; message?: string }>) => {
+const getFriendlyApiErrorMessage = (error: AxiosError<{ detail?: string; error?: { message?: string }; message?: string }>) => {
   const status = error.response?.status;
-  const serverMessage = error.response?.data?.error?.message ?? error.response?.data?.message;
+  const serverMessage = error.response?.data?.error?.message ?? error.response?.data?.message ?? error.response?.data?.detail;
 
   if (!error.response) {
     return '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.';
@@ -62,7 +62,7 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ error?: { message?: string }; message?: string }>) => {
+  (error: AxiosError<{ detail?: string; error?: { message?: string }; message?: string }>) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('auth-storage');

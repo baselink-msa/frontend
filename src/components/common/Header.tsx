@@ -8,6 +8,7 @@ const navItems = [
   { to: '/games', label: '경기' },
   { to: '/my-tickets', label: '내 예매', auth: true },
   { to: '/orders', label: '주문', auth: true },
+  { to: '/orders/my', label: '주문내역', auth: true },
   { to: '/chatbot', label: '챗봇' },
   { to: '/admin', label: '관리자', admin: true },
 ];

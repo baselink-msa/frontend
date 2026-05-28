@@ -29,7 +29,7 @@ export function WaitingRoomPage() {
     mutationFn: () => waitingRoomApi.issueToken(numericGameId),
     onSuccess: (response) => {
       setTicketAccessToken(response.data.ticketAccessToken);
-      navigate(`/games/${numericGameId}/seats`);
+      navigate(`/games/${numericGameId}/seats`, { replace: true });
     },
     onError: (err) => setError(err.message || '대기열 토큰 발급에 실패했습니다.'),
   });

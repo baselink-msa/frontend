@@ -1,7 +1,9 @@
 import { mockApi } from '../mocks/mockApi';
 import type { ApiResponse } from '../types/common';
 import type { MyTicket, ReservationCreated, ReservationDetail, ReservationRequest } from '../types/ticket';
+import { formatFallbackSeatLabel, formatSeatLabel } from '../utils/seat';
 import { apiClient, toApiResponse, USE_MOCK } from './client';
+import { gameApi } from './gameApi';
 
 type BackendReservation = {
   reservationId: number;
@@ -15,12 +17,40 @@ type BackendReservation = {
   updatedAt: string;
 };
 
+const enrichReservation = async (reservation: BackendReservation): Promise<ReservationDetail> => {
+  const [gameResponse, seatsResponse] = await Promise.allSettled([
+    gameApi.getGame(reservation.gameId),
+    gameApi.getSeats(reservation.gameId),
+  ]);
+  const game = gameResponse.status === 'fulfilled' ? gameResponse.value.data : null;
+  const seat = seatsResponse.status === 'fulfilled'
+    ? seatsResponse.value.data.find((item) => item.seatId === reservation.seatId)
+    : null;
+
+  const detail: ReservationDetail = {
+    reservationId: reservation.reservationId,
+    gameId: reservation.gameId,
+    seatId: reservation.seatId,
+    seatName: seat ? formatSeatLabel(seat) : formatFallbackSeatLabel(undefined, reservation.seatId),
+    homeTeamName: game?.homeTeamName,
+    awayTeamName: game?.awayTeamName,
+    stadiumName: game?.stadium.name,
+    gameStartTime: game?.gameStartTime,
+    status: reservation.status,
+    createdAt: reservation.createdAt,
+    updatedAt: reservation.updatedAt,
+  };
+
+  sessionStorage.setItem(`reservation:${reservation.reservationId}`, JSON.stringify(detail));
+  return detail;
+};
+
 const cacheReservation = (reservation: BackendReservation) => {
   const detail: ReservationDetail = {
     reservationId: reservation.reservationId,
     gameId: reservation.gameId,
     seatId: reservation.seatId,
-    seatName: `seat-${reservation.seatId}`,
+    seatName: formatFallbackSeatLabel(undefined, reservation.seatId),
     status: reservation.status,
     createdAt: reservation.createdAt,
     updatedAt: reservation.updatedAt,
@@ -67,34 +97,37 @@ export const ticketApi = {
   getReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
     if (USE_MOCK) return mockApi.tickets.detail(reservationId);
     const { data } = await apiClient.get<BackendReservation>(`/tickets/${reservationId}`);
-    const detail = cacheReservation(data);
+    const detail = await enrichReservation(data);
     return toApiResponse(detail);
   },
   getMyTickets: async (): Promise<ApiResponse<MyTicket[]>> => {
     if (USE_MOCK) return mockApi.tickets.my();
     const { data } = await apiClient.get<BackendReservation[]>('/tickets/my');
-    return toApiResponse(
-      data.map((r) => ({
+    const enriched = await Promise.all(data.map(async (r) => {
+      const detail = await enrichReservation(r);
+      return {
         reservationId: r.reservationId,
         gameId: r.gameId,
-        homeTeamName: '',
-        awayTeamName: '',
-        gameStartTime: r.createdAt,
-        seatName: `seat-${r.seatId}`,
+        homeTeamName: detail.homeTeamName ?? '',
+        awayTeamName: detail.awayTeamName ?? '',
+        stadiumName: detail.stadiumName,
+        gameStartTime: detail.gameStartTime ?? r.createdAt,
+        seatName: detail.seatName,
         status: r.status,
-      })),
-    );
+      };
+    }));
+    return toApiResponse(enriched);
   },
 
   confirmReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
     const { data } = await apiClient.post<BackendReservation>(`/tickets/${reservationId}/confirm`);
-    const detail = cacheReservation(data);
+    const detail = await enrichReservation(data);
     return toApiResponse(detail, '예매가 확정되었습니다.');
   },
 
   cancelReservation: async (reservationId: number): Promise<ApiResponse<ReservationDetail>> => {
     const { data } = await apiClient.post<BackendReservation>(`/tickets/${reservationId}/cancel`);
-    const detail = cacheReservation(data);
+    const detail = await enrichReservation(data);
     return toApiResponse(detail, '예매가 취소되었습니다.');
   },
 };

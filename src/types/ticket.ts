@@ -17,6 +17,10 @@ export type ReservationCreated = {
 
 export type ReservationDetail = ReservationCreated & {
   seatName: string;
+  homeTeamName?: string;
+  awayTeamName?: string;
+  stadiumName?: string;
+  gameStartTime?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -26,6 +30,7 @@ export type MyTicket = {
   gameId: number;
   homeTeamName: string;
   awayTeamName: string;
+  stadiumName?: string;
   gameStartTime: string;
   seatName: string;
   status: ReservationStatus;
