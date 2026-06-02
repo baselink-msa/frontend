@@ -80,19 +80,23 @@ export function HomePage() {
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-slate-950/45 to-slate-950/10" />
         <div className="relative flex min-h-[520px] max-w-3xl flex-col justify-end px-6 py-8 text-white sm:px-10 lg:px-12">
           <p className="text-sm font-bold text-blue-100">BaseLink</p>
-          <h1 className="mt-3 text-4xl font-black leading-tight md:text-5xl">{activeSlide.title}</h1>
-          <p className="mt-5 max-w-2xl text-base leading-7 text-slate-100">{activeSlide.description}</p>
+          <h1 className="mt-3 max-w-2xl break-keep text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
+            {activeSlide.title}
+          </h1>
+          <p className="mt-5 max-w-2xl break-keep text-base leading-7 text-slate-100">
+            {activeSlide.description}
+          </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <Link
               to="/games"
-              className="inline-flex items-center gap-2 rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-md bg-blue-700 px-5 py-3 text-sm font-bold text-white hover:bg-blue-800"
             >
               경기 보러가기
               <ArrowRight size={17} />
             </Link>
             <Link
               to="/my-tickets"
-              className="inline-flex items-center gap-2 rounded-md bg-white/95 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white"
+              className="inline-flex items-center gap-2 whitespace-nowrap rounded-md bg-white/95 px-5 py-3 text-sm font-bold text-slate-950 hover:bg-white"
             >
               내 예매 확인
             </Link>
