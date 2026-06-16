@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Layout } from './components/common/Layout';
 import { PublicOnly, RequireAdmin, RequireAuth } from './components/common/RouteGuards';
+import { AccountPage } from './pages/AccountPage';
 import { AdminPage } from './pages/AdminPage';
 import { ChatbotPage } from './pages/ChatbotPage';
 import { GameDetailPage } from './pages/GameDetailPage';
@@ -83,6 +84,14 @@ export function App() {
           element={
             <RequireAuth>
               <OrderHistoryPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <RequireAuth>
+              <AccountPage />
             </RequireAuth>
           }
         />

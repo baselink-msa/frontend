@@ -19,4 +19,11 @@ export const authApi = {
     const { data } = await apiClient.get<ApiResponse<User>>('/auth/me');
     return data;
   },
+  withdraw: async (): Promise<void> => {
+    if (USE_MOCK) {
+      await Promise.resolve();
+      return;
+    }
+    await apiClient.delete('/auth/me');
+  },
 };
