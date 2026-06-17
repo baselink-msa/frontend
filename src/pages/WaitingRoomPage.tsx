@@ -15,23 +15,28 @@ export function WaitingRoomPage() {
   const setTicketAccessToken = useReservationStore((state) => state.setTicketAccessToken);
   const [error, setError] = useState('');
 
-  const statusQuery = useQuery({
-    queryKey: ['waiting-room', numericGameId],
-    queryFn: () => waitingRoomApi.status(numericGameId),
-    refetchInterval: (query) => {
-      const state = query.state.data?.data;
-      return state?.canEnter || state?.status === 'ALLOWED' ? false : 3000;
-    },
-    enabled: Boolean(numericGameId),
-  });
-
   const issueTokenMutation = useMutation({
     mutationFn: () => waitingRoomApi.issueToken(numericGameId),
+    onMutate: () => {
+      setError('');
+    },
     onSuccess: (response) => {
       setTicketAccessToken(response.data.ticketAccessToken, numericGameId);
       navigate(`/games/${numericGameId}/seats`, { replace: true });
     },
-    onError: (err) => setError(err.message || '대기열 토큰 발급에 실패했습니다.'),
+    onError: (err) => {
+      setError(`${err.message || '대기열 토큰 발급에 실패했습니다.'} 잠시 후 다시 확인합니다.`);
+    },
+  });
+
+  const statusQuery = useQuery({
+    queryKey: ['waiting-room', numericGameId],
+    queryFn: () => waitingRoomApi.status(numericGameId),
+    refetchInterval: () => {
+      if (issueTokenMutation.isSuccess) return false;
+      return 3000;
+    },
+    enabled: Boolean(numericGameId),
   });
 
   const waitingState = statusQuery.data?.data;
@@ -41,7 +46,13 @@ export function WaitingRoomPage() {
     if (waitingState.canEnter || waitingState.status === 'ALLOWED') {
       issueTokenMutation.mutate();
     }
-  }, [waitingState, issueTokenMutation]);
+  }, [
+    waitingState?.canEnter,
+    waitingState?.status,
+    issueTokenMutation.isPending,
+    issueTokenMutation.isSuccess,
+    issueTokenMutation.mutate,
+  ]);
 
   if (statusQuery.isLoading) return <Loading label="대기열 상태를 확인하는 중입니다." />;
 
