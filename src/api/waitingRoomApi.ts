@@ -32,4 +32,12 @@ export const waitingRoomApi = {
       },
     };
   },
+  releaseToken: async (gameId: number, ticketAccessToken: string): Promise<ApiResponse<null>> => {
+    if (USE_MOCK) return { success: true, data: null, message: '좌석 선택 슬롯이 반납되었습니다.' };
+    const { data } = await apiClient.post<ApiResponse<null>>(
+      `/waiting-room/games/${gameId}/release-token`,
+      { ticketAccessToken },
+    );
+    return data;
+  },
 };

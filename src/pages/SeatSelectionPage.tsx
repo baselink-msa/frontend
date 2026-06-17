@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { gameApi } from '../api/gameApi';
 import { seatLockApi } from '../api/seatLockApi';
 import { ticketApi } from '../api/ticketApi';
+import { waitingRoomApi } from '../api/waitingRoomApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { SeatGrid } from '../components/seats/SeatGrid';
@@ -18,12 +19,30 @@ export function SeatSelectionPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { ticketAccessToken, ticketAccessGameId, setSelectedSeat } = useReservationStore();
+  const { ticketAccessToken, ticketAccessGameId, setSelectedSeat, clearTicketAccessToken } = useReservationStore();
   const changeReservationId = (location.state as { changeReservationId?: number } | null)?.changeReservationId;
   const hasScopedTicketAccess = Boolean(ticketAccessToken && ticketAccessGameId === numericGameId);
   const [sectionId, setSectionId] = useState<number | undefined>();
   const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
+  const tokenReleasedRef = useRef(false);
+
+  const releaseSeatSelectionSlot = useCallback(async () => {
+    if (!hasScopedTicketAccess || !ticketAccessToken || tokenReleasedRef.current) return;
+    tokenReleasedRef.current = true;
+    await waitingRoomApi.releaseToken(numericGameId, ticketAccessToken).catch(() => undefined);
+    clearTicketAccessToken();
+  }, [clearTicketAccessToken, hasScopedTicketAccess, numericGameId, ticketAccessToken]);
+
+  useEffect(() => {
+    tokenReleasedRef.current = false;
+  }, [ticketAccessToken, ticketAccessGameId]);
+
+  useEffect(() => {
+    return () => {
+      releaseSeatSelectionSlot();
+    };
+  }, [releaseSeatSelectionSlot]);
 
   const gameQuery = useQuery({
     queryKey: ['game', numericGameId],
@@ -87,7 +106,8 @@ export function SeatSelectionPage() {
 
       return result;
     },
-    onSuccess: (response) => {
+    onSuccess: async (response) => {
+      await releaseSeatSelectionSlot();
       queryClient.invalidateQueries({ queryKey: ['seats', numericGameId] });
       queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
       navigate(`/reservations/${response.data.reservationId}`);
