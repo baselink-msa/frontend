@@ -7,6 +7,7 @@ import type {
   AdminSeatRequest,
   AdminSeatSectionRequest,
   WaitingRoomPolicyRequest,
+  WaitingRoomPolicyResponse,
 } from '../types/admin';
 import type { ApiResponse } from '../types/common';
 import { apiClient, USE_MOCK } from './client';
@@ -36,9 +37,16 @@ export const adminApi = {
     USE_MOCK ? mockApi.admin.createSeat(request) : post('/admin/seats', request),
   createGameSeats: (gameId: number, request: AdminGameSeatsRequest) =>
     USE_MOCK ? mockApi.admin.createGameSeats(gameId, request) : post(`/admin/games/${gameId}/seats`, request),
+  getWaitingPolicy: async (gameId: number) => {
+    if (USE_MOCK) return mockApi.admin.getWaitingPolicy(gameId);
+    const { data } = await apiClient.get<ApiResponse<WaitingRoomPolicyResponse>>(
+      `/admin/games/${gameId}/waiting-room-policy`,
+    );
+    return data;
+  },
   updateWaitingPolicy: async (gameId: number, request: WaitingRoomPolicyRequest) => {
     if (USE_MOCK) return mockApi.admin.updateWaitingPolicy(gameId, request);
-    const { data } = await apiClient.put<ApiResponse<unknown>>(
+    const { data } = await apiClient.put<ApiResponse<WaitingRoomPolicyResponse>>(
       `/admin/games/${gameId}/waiting-room-policy`,
       request,
     );

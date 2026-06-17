@@ -256,6 +256,8 @@ export const mockApi = {
     createSeat: (request: AdminSeatRequest) => ok({ id: Date.now(), ...request }, '좌석이 등록되었습니다.'),
     createGameSeats: (gameId: number, request: AdminGameSeatsRequest) =>
       ok({ gameId, ...request }, '경기 좌석이 생성되었습니다.'),
+    getWaitingPolicy: (gameId: number) =>
+      ok({ gameId, maxEnterPerMinute: 100, tokenTtlSeconds: 300, enabled: true }, '대기열 정책 조회 성공'),
     updateWaitingPolicy: (gameId: number, request: WaitingRoomPolicyRequest) =>
       ok({ gameId, ...request }, '대기열 정책이 저장되었습니다.'),
     createMenu: (request: AdminMenuRequest) => ok({ id: Date.now(), ...request }, '메뉴가 등록되었습니다.'),

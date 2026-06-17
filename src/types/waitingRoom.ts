@@ -11,6 +11,14 @@ export type WaitingRoomState = {
   position: number;
   peopleAhead: number;
   estimatedWaitSeconds: number;
+  serverTimeEpochMillis?: number;
+  nextCheckAfterSeconds?: number;
+  policyMaxEnterPerMinute?: number;
+  currentReadyPodCount?: number;
+  projectedReadyPodCount?: number;
+  effectiveEnterPerMinute?: number;
+  projectedEnterPerMinute?: number;
+  currentMinuteRemainingSlots?: number;
   canEnter?: boolean;
 };
 
