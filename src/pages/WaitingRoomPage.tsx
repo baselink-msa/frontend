@@ -27,6 +27,7 @@ export function WaitingRoomPage() {
     },
     onError: (err) => {
       setError(`${err.message || '대기열 토큰 발급에 실패했습니다.'} 잠시 후 다시 확인합니다.`);
+      statusQuery.refetch();
     },
   });
 
@@ -75,6 +76,19 @@ export function WaitingRoomPage() {
     issueTokenMutation.isPending,
     issueTokenMutation.isSuccess,
     issueTokenMutation.mutate,
+  ]);
+
+  useEffect(() => {
+    if (!waitingState || waitingState.canEnter || waitingState.status === 'ALLOWED') return;
+    if (displayedWaitSeconds <= 0 && !statusQuery.isFetching) {
+      statusQuery.refetch();
+    }
+  }, [
+    displayedWaitSeconds,
+    statusQuery.isFetching,
+    statusQuery.refetch,
+    waitingState?.canEnter,
+    waitingState?.status,
   ]);
 
   if (statusQuery.isLoading) return <Loading label="대기열 상태를 확인하는 중입니다." />;
