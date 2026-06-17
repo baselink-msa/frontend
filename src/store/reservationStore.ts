@@ -11,6 +11,7 @@ type ReservationState = {
   lockId: string | null;
   setSelectedGame: (game: GameDetail | null) => void;
   setTicketAccessToken: (token: string | null, gameId?: number | null) => void;
+  clearTicketAccessToken: () => void;
   setSelectedSeat: (seat: GameSeat | null, lockId?: string | null) => void;
   resetReservationFlow: () => void;
 };
@@ -26,6 +27,7 @@ export const useReservationStore = create<ReservationState>()(
       setSelectedGame: (selectedGame) => set({ selectedGame }),
       setTicketAccessToken: (ticketAccessToken, ticketAccessGameId = null) =>
         set({ ticketAccessToken, ticketAccessGameId }),
+      clearTicketAccessToken: () => set({ ticketAccessToken: null, ticketAccessGameId: null }),
       setSelectedSeat: (selectedSeat, lockId = null) => set({ selectedSeat, lockId }),
       resetReservationFlow: () =>
         set({ ticketAccessToken: null, ticketAccessGameId: null, selectedSeat: null, lockId: null }),
