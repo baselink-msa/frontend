@@ -1,21 +1,49 @@
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ticketApi } from '../api/ticketApi';
 import { seatLockApi } from '../api/seatLockApi';
+import { waitingRoomApi } from '../api/waitingRoomApi';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { Loading } from '../components/common/Loading';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { useReservationStore } from '../store/reservationStore';
 import { formatDateTime, formatServerDateTime } from '../utils/date';
-import { useState } from 'react';
 
 export function ReservationResultPage() {
   const { reservationId = '0' } = useParams();
   const numericReservationId = Number(reservationId);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { selectedGame, selectedSeat, lockId, resetReservationFlow } = useReservationStore();
+  const {
+    selectedGame,
+    selectedSeat,
+    lockId,
+    ticketAccessToken,
+    ticketAccessGameId,
+    clearTicketAccessToken,
+    resetReservationFlow,
+  } = useReservationStore();
   const [error, setError] = useState('');
+  const tokenReleasedRef = useRef(false);
+
+  const reservationGameId = selectedGame?.gameId ?? ticketAccessGameId ?? null;
+  const releaseSeatSelectionSlot = useCallback(async () => {
+    if (!reservationGameId || !ticketAccessToken || tokenReleasedRef.current) return;
+    tokenReleasedRef.current = true;
+    await waitingRoomApi.releaseToken(reservationGameId, ticketAccessToken).catch(() => undefined);
+    clearTicketAccessToken();
+  }, [clearTicketAccessToken, reservationGameId, ticketAccessToken]);
+
+  useEffect(() => {
+    tokenReleasedRef.current = false;
+  }, [ticketAccessToken, reservationGameId]);
+
+  useEffect(() => {
+    return () => {
+      releaseSeatSelectionSlot();
+    };
+  }, [releaseSeatSelectionSlot]);
 
   const { data, isLoading } = useQuery({
     queryKey: ['reservation', numericReservationId],
@@ -25,7 +53,8 @@ export function ReservationResultPage() {
 
   const confirmMutation = useMutation({
     mutationFn: () => ticketApi.confirmReservation(numericReservationId),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await releaseSeatSelectionSlot();
       queryClient.invalidateQueries({ queryKey: ['reservation', numericReservationId] });
       setError('');
     },
@@ -35,6 +64,7 @@ export function ReservationResultPage() {
   const cancelMutation = useMutation({
     mutationFn: () => ticketApi.cancelReservation(numericReservationId),
     onSuccess: async () => {
+      await releaseSeatSelectionSlot();
       if (selectedSeat && lockId && selectedGame) {
         await seatLockApi.releaseLock({
           gameId: selectedGame.gameId,
@@ -62,6 +92,7 @@ export function ReservationResultPage() {
       }
       // 예매 취소
       await ticketApi.cancelReservation(numericReservationId);
+      await releaseSeatSelectionSlot();
       setError('');
     },
     onSuccess: () => {

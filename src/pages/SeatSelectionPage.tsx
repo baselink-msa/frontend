@@ -26,6 +26,7 @@ export function SeatSelectionPage() {
   const [pickedSeat, setPickedSeat] = useState<GameSeat | null>(null);
   const [error, setError] = useState('');
   const tokenReleasedRef = useRef(false);
+  const keepTokenForReservationRef = useRef(false);
 
   const releaseSeatSelectionSlot = useCallback(async () => {
     if (!hasScopedTicketAccess || !ticketAccessToken || tokenReleasedRef.current) return;
@@ -40,6 +41,7 @@ export function SeatSelectionPage() {
 
   useEffect(() => {
     return () => {
+      if (keepTokenForReservationRef.current) return;
       releaseSeatSelectionSlot();
     };
   }, [releaseSeatSelectionSlot]);
@@ -107,7 +109,7 @@ export function SeatSelectionPage() {
       return result;
     },
     onSuccess: async (response) => {
-      await releaseSeatSelectionSlot();
+      keepTokenForReservationRef.current = true;
       queryClient.invalidateQueries({ queryKey: ['seats', numericGameId] });
       queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
       navigate(`/reservations/${response.data.reservationId}`);
