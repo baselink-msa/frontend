@@ -30,6 +30,10 @@ export type WaitingRoomPolicyRequest = {
   enabled: boolean;
 };
 
+export type WaitingRoomPolicyResponse = WaitingRoomPolicyRequest & {
+  gameId: number;
+};
+
 export type AdminMenuRequest = {
   name: string;
   price: number;

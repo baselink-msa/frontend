@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminApi } from '../api/adminApi';
 import { chatbotApi } from '../api/chatbotApi';
@@ -440,12 +440,34 @@ function WaitingPolicyPanel({
   const [tokenTtlSeconds, setTokenTtlSeconds] = useState(300);
   const [enabled, setEnabled] = useState(true);
 
+  const policyQuery = useQuery({
+    queryKey: ['admin-waiting-policy', gameId],
+    queryFn: () => {
+      if (!gameId) throw new Error('경기를 선택해 주세요.');
+      return adminApi.getWaitingPolicy(gameId);
+    },
+    enabled: Boolean(gameId),
+  });
+
+  useEffect(() => {
+    const policy = policyQuery.data?.data;
+    if (!policy) return;
+    setMaxEnterPerMinute(policy.maxEnterPerMinute);
+    setTokenTtlSeconds(policy.tokenTtlSeconds);
+    setEnabled(policy.enabled);
+  }, [policyQuery.data]);
+
   const mutation = useMutation({
     mutationFn: () => {
       if (!gameId) throw new Error('경기를 선택해 주세요.');
       return adminApi.updateWaitingPolicy(gameId, { maxEnterPerMinute, tokenTtlSeconds, enabled });
     },
-    onSuccess: (response) => onStatus({ success: response.message ?? '대기열 정책이 저장되었습니다.' }),
+    onSuccess: (response) => {
+      setMaxEnterPerMinute(response.data.maxEnterPerMinute);
+      setTokenTtlSeconds(response.data.tokenTtlSeconds);
+      setEnabled(response.data.enabled);
+      onStatus({ success: response.message ?? '대기열 정책이 저장되었습니다.' });
+    },
     onError: (err) => onStatus({ error: err.message ?? '대기열 정책 저장에 실패했습니다.' }),
   });
 
@@ -467,6 +489,12 @@ function WaitingPolicyPanel({
             ))}
           </select>
         </label>
+        {policyQuery.isFetching ? (
+          <p className="rounded-md bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-700">
+            선택한 경기의 현재 대기열 정책을 불러오는 중입니다.
+          </p>
+        ) : null}
+        <ErrorMessage message={policyQuery.error?.message} />
         <div className="grid gap-3 md:grid-cols-3">
           <NumberField label="분당 입장 수" value={maxEnterPerMinute} onChange={setMaxEnterPerMinute} min={1} />
           <NumberField label="토큰 TTL 초" value={tokenTtlSeconds} onChange={setTokenTtlSeconds} min={60} />

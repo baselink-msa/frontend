@@ -33,9 +33,10 @@ export function WaitingRoomPage() {
   const statusQuery = useQuery({
     queryKey: ['waiting-room', numericGameId],
     queryFn: () => waitingRoomApi.status(numericGameId),
-    refetchInterval: () => {
+    refetchInterval: (query) => {
       if (issueTokenMutation.isSuccess) return false;
-      return 3000;
+      const nextCheckAfterSeconds = query.state.data?.data.nextCheckAfterSeconds ?? 3;
+      return Math.max(1, nextCheckAfterSeconds) * 1000;
     },
     enabled: Boolean(numericGameId),
   });
@@ -44,8 +45,11 @@ export function WaitingRoomPage() {
 
   useEffect(() => {
     if (!waitingState) return;
-    setDisplayedWaitSeconds(Math.max(0, waitingState.estimatedWaitSeconds ?? 0));
-  }, [waitingState?.estimatedWaitSeconds, waitingState?.position]);
+    const elapsedSeconds = waitingState.serverTimeEpochMillis
+      ? Math.floor((Date.now() - waitingState.serverTimeEpochMillis) / 1000)
+      : 0;
+    setDisplayedWaitSeconds(Math.max(0, (waitingState.estimatedWaitSeconds ?? 0) - elapsedSeconds));
+  }, [waitingState?.estimatedWaitSeconds, waitingState?.position, waitingState?.serverTimeEpochMillis]);
 
   useEffect(() => {
     if (!waitingState || waitingState.canEnter || waitingState.status === 'ALLOWED') {
@@ -96,13 +100,36 @@ export function WaitingRoomPage() {
       </div>
       <dl className="mt-8 grid gap-4 sm:grid-cols-2">
         <Info label="현재 내 앞 대기 인원" value={`${waitingState?.peopleAhead ?? 0}명`} />
-        <Info label="예상 대기 시간" value={formatSeconds(displayedWaitSeconds)} helper="1초마다 줄어들어요" />
+        <Info
+          label="예상 대기 시간"
+          value={waitingState?.canEnter ? '입장 가능' : formatSeconds(displayedWaitSeconds)}
+          helper={waitingState?.canEnter ? '좌석 선택 화면으로 이동 중입니다' : waitTimeHelper(displayedWaitSeconds)}
+        />
+        <Info
+          label="현재 입장 처리량"
+          value={`${waitingState?.effectiveEnterPerMinute ?? 0}명/분`}
+          helper={`Ready Pod ${waitingState?.currentReadyPodCount ?? 0}개 기준`}
+        />
+        <Info
+          label="예상 확장 처리량"
+          value={`${waitingState?.projectedEnterPerMinute ?? waitingState?.effectiveEnterPerMinute ?? 0}명/분`}
+          helper={`예상 Pod ${waitingState?.projectedReadyPodCount ?? waitingState?.currentReadyPodCount ?? 0}개 기준`}
+        />
+        <Info
+          label="이번 분 남은 입장 슬롯"
+          value={`${waitingState?.currentMinuteRemainingSlots ?? 0}명`}
+          helper={`정책 상한 ${waitingState?.policyMaxEnterPerMinute ?? 0}명/분`}
+        />
       </dl>
       <p className="mt-8 rounded-lg bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-800">
         입장 가능 시 자동으로 좌석 선택 화면으로 이동합니다.
       </p>
     </section>
   );
+}
+
+function waitTimeHelper(seconds: number) {
+  return seconds <= 0 ? '입장 가능 여부를 확인하는 중입니다' : '서버 처리량 기준으로 보정됩니다';
 }
 
 function Info({ label, value, helper }: { label: string; value: string; helper?: string }) {
