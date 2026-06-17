@@ -14,34 +14,64 @@ export function WaitingRoomPage() {
   const navigate = useNavigate();
   const setTicketAccessToken = useReservationStore((state) => state.setTicketAccessToken);
   const [error, setError] = useState('');
-
-  const statusQuery = useQuery({
-    queryKey: ['waiting-room', numericGameId],
-    queryFn: () => waitingRoomApi.status(numericGameId),
-    refetchInterval: (query) => {
-      const state = query.state.data?.data;
-      return state?.canEnter || state?.status === 'ALLOWED' ? false : 3000;
-    },
-    enabled: Boolean(numericGameId),
-  });
+  const [displayedWaitSeconds, setDisplayedWaitSeconds] = useState(0);
 
   const issueTokenMutation = useMutation({
     mutationFn: () => waitingRoomApi.issueToken(numericGameId),
+    onMutate: () => {
+      setError('');
+    },
     onSuccess: (response) => {
       setTicketAccessToken(response.data.ticketAccessToken, numericGameId);
       navigate(`/games/${numericGameId}/seats`, { replace: true });
     },
-    onError: (err) => setError(err.message || '대기열 토큰 발급에 실패했습니다.'),
+    onError: (err) => {
+      setError(`${err.message || '대기열 토큰 발급에 실패했습니다.'} 잠시 후 다시 확인합니다.`);
+    },
+  });
+
+  const statusQuery = useQuery({
+    queryKey: ['waiting-room', numericGameId],
+    queryFn: () => waitingRoomApi.status(numericGameId),
+    refetchInterval: () => {
+      if (issueTokenMutation.isSuccess) return false;
+      return 3000;
+    },
+    enabled: Boolean(numericGameId),
   });
 
   const waitingState = statusQuery.data?.data;
+
+  useEffect(() => {
+    if (!waitingState) return;
+    setDisplayedWaitSeconds(Math.max(0, waitingState.estimatedWaitSeconds ?? 0));
+  }, [waitingState?.estimatedWaitSeconds, waitingState?.position]);
+
+  useEffect(() => {
+    if (!waitingState || waitingState.canEnter || waitingState.status === 'ALLOWED') {
+      setDisplayedWaitSeconds(0);
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setDisplayedWaitSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [waitingState?.canEnter, waitingState?.status, waitingState?.position]);
 
   useEffect(() => {
     if (!waitingState || issueTokenMutation.isPending || issueTokenMutation.isSuccess) return;
     if (waitingState.canEnter || waitingState.status === 'ALLOWED') {
       issueTokenMutation.mutate();
     }
-  }, [waitingState, issueTokenMutation]);
+  }, [
+    waitingState?.canEnter,
+    waitingState?.status,
+    issueTokenMutation.isPending,
+    issueTokenMutation.isSuccess,
+    issueTokenMutation.mutate,
+  ]);
 
   if (statusQuery.isLoading) return <Loading label="대기열 상태를 확인하는 중입니다." />;
 
@@ -66,7 +96,7 @@ export function WaitingRoomPage() {
       </div>
       <dl className="mt-8 grid gap-4 sm:grid-cols-2">
         <Info label="현재 내 앞 대기 인원" value={`${waitingState?.peopleAhead ?? 0}명`} />
-        <Info label="예상 대기 시간" value={formatSeconds(waitingState?.estimatedWaitSeconds ?? 0)} />
+        <Info label="예상 대기 시간" value={formatSeconds(displayedWaitSeconds)} helper="1초마다 줄어들어요" />
       </dl>
       <p className="mt-8 rounded-lg bg-blue-50 px-4 py-3 text-center text-sm font-semibold text-blue-800">
         입장 가능 시 자동으로 좌석 선택 화면으로 이동합니다.
@@ -75,11 +105,12 @@ export function WaitingRoomPage() {
   );
 }
 
-function Info({ label, value }: { label: string; value: string }) {
+function Info({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <div className="rounded-lg border border-slate-200 p-4 text-center">
       <dt className="text-sm text-slate-500">{label}</dt>
       <dd className="mt-1 text-xl font-bold text-slate-950">{value}</dd>
+      {helper ? <p className="mt-1 text-xs font-semibold text-blue-700">{helper}</p> : null}
     </div>
   );
 }
