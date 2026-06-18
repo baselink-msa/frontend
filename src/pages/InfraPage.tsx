@@ -16,7 +16,7 @@ export function InfraPage() {
   const iframeSrc = `${GRAFANA_BASE}/d/${active.uid}?orgId=1&kiosk&theme=light`;
 
   return (
-    <div className="fixed inset-0 flex bg-slate-900">
+    <div className="fixed inset-x-0 top-16 bottom-0 flex bg-slate-900">
       {/* Sidebar */}
       <aside className="flex w-60 flex-col border-r border-slate-700 bg-slate-900">
         <div className="px-5 py-6">
