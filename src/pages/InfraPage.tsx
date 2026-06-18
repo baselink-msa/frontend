@@ -8,12 +8,15 @@ const dashboards = [
   { id: 'db-mq', label: 'DB & Message Queue', uid: 'baselink-db-mq' },
   { id: 'autoscaling', label: 'Autoscaling & K8s', uid: 'baselink-autoscaling-k8s' },
   { id: 'waf-security', label: 'WAF Security', uid: 'baselink-waf-security' },
+  { id: 'jaeger-traces', label: 'Jaeger Traces', uid: '__explore' },
 ];
 
 export function InfraPage() {
   const [active, setActive] = useState(dashboards[0]);
 
-  const iframeSrc = `${GRAFANA_BASE}/d/${active.uid}?orgId=1&kiosk&theme=light`;
+  const iframeSrc = active.uid === '__explore'
+    ? `${GRAFANA_BASE}/explore?orgId=1&left={"datasource":"Jaeger","queries":[{"refId":"A","queryType":"search"}]}&kiosk&theme=light`
+    : `${GRAFANA_BASE}/d/${active.uid}?orgId=1&kiosk&theme=light`;
 
   return (
     <div className="fixed inset-x-0 top-16 bottom-0 flex bg-slate-900">
