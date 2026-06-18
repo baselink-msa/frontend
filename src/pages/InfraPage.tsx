@@ -42,7 +42,7 @@ export function InfraPage() {
 
         <div className="border-t border-slate-700 px-5 py-4">
           <a
-            href={`${GRAFANA_BASE}`}
+            href={`${GRAFANA_BASE}/`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-slate-400 hover:text-white"
