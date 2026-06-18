@@ -7,6 +7,7 @@ import { ChatbotPage } from './pages/ChatbotPage';
 import { GameDetailPage } from './pages/GameDetailPage';
 import { GameListPage } from './pages/GameListPage';
 import { HomePage } from './pages/HomePage';
+import { InfraPage } from './pages/InfraPage';
 import { LoginPage } from './pages/LoginPage';
 import { MyTicketsPage } from './pages/MyTicketsPage';
 import { OrderPage } from './pages/OrderPage';
@@ -101,6 +102,14 @@ export function App() {
           element={
             <RequireAdmin>
               <AdminPage />
+            </RequireAdmin>
+          }
+        />
+        <Route
+          path="/infra"
+          element={
+            <RequireAdmin>
+              <InfraPage />
             </RequireAdmin>
           }
         />
