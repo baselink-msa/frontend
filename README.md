@@ -132,7 +132,8 @@ src/
 - 리전: `ap-northeast-2`
 - S3 버킷: `baselink-frontend-740831361032-ap-northeast-2`
 - CloudFront 배포 ID: `E1L0BJIJOTT0R6`
-- CloudFront 도메인: `d1z20dvak4bl13.cloudfront.net`
+- CloudFront 사용자 도메인: `baselink.kro.kr`
+- CloudFront 배포 도메인: `d1z20dvak4bl13.cloudfront.net`
 - EKS 클러스터: `baselink-dev`
 - Kubernetes 네임스페이스: `baselink-dev`
 
