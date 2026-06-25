@@ -15,7 +15,29 @@ export function InfraPage() {
   const [active, setActive] = useState(dashboards[0]);
 
   const iframeSrc = active.uid === '__explore'
-    ? `${GRAFANA_BASE}/explore?orgId=1&left={"datasource":"Jaeger","queries":[{"refId":"A","queryType":"search"}]}&kiosk&theme=light`
+    ? `${GRAFANA_BASE}/explore?${new URLSearchParams({
+        orgId: '1',
+        left: JSON.stringify({
+          datasource: 'Jaeger',
+          queries: [
+            {
+              refId: 'A',
+              datasource: {
+                type: 'jaeger',
+                uid: 'Jaeger',
+              },
+              queryType: 'search',
+              limit: 20,
+            },
+          ],
+          range: {
+            from: 'now-1h',
+            to: 'now',
+          },
+        }),
+        kiosk: '',
+        theme: 'light',
+      }).toString()}`
     : `${GRAFANA_BASE}/d/${active.uid}?orgId=1&kiosk&theme=light`;
 
   return (
