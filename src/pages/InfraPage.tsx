@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const GRAFANA_BASE = 'https://d1z20dvak4bl13.cloudfront.net/grafana';
+const GRAFANA_BASE = '/grafana';
 
 const dashboards = [
   { id: 'e2e-business', label: 'E2E & Business', uid: 'baselink-e2e-business' },
@@ -17,22 +17,28 @@ export function InfraPage() {
   const iframeSrc = active.uid === '__explore'
     ? `${GRAFANA_BASE}/explore?${new URLSearchParams({
         orgId: '1',
-        left: JSON.stringify({
-          datasource: 'Jaeger',
-          queries: [
-            {
-              refId: 'A',
-              datasource: {
-                type: 'jaeger',
-                uid: 'Jaeger',
-              },
-              queryType: 'search',
-              limit: 20,
+        schemaVersion: '1',
+        panes: JSON.stringify({
+          jaeger: {
+            datasource: {
+              type: 'jaeger',
+              uid: 'jaeger',
             },
-          ],
-          range: {
-            from: 'now-1h',
-            to: 'now',
+            queries: [
+              {
+                refId: 'A',
+                datasource: {
+                  type: 'jaeger',
+                  uid: 'jaeger',
+                },
+                queryType: 'search',
+                limit: 20,
+              },
+            ],
+            range: {
+              from: 'now-1h',
+              to: 'now',
+            },
           },
         }),
         kiosk: '',
