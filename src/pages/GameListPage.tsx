@@ -20,7 +20,9 @@ const statusLabels: Record<GameStatus, string> = {
 type ViewMode = 'grid' | 'list' | 'date';
 
 const getEffectiveStatus = (game: GameSummary): GameStatus =>
-  game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
+  new Date(game.gameStartTime).getTime() <= Date.now()
+    ? 'CLOSED'
+    : game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
     ? 'TICKET_OPEN'
     : game.status;
 
@@ -61,7 +63,9 @@ export function GameListPage() {
       );
     }
 
-    return result;
+    return [...result].sort(
+      (a, b) => new Date(b.gameStartTime).getTime() - new Date(a.gameStartTime).getTime(),
+    );
   }, [games, statusFilter, stadiumFilter, search]);
 
   // 날짜별 그룹핑
@@ -77,7 +81,14 @@ export function GameListPage() {
       if (!map.has(dateKey)) map.set(dateKey, []);
       map.get(dateKey)!.push(game);
     }
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Array.from(map.entries())
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([date, dateGames]) => [
+        date,
+        [...dateGames].sort(
+          (a, b) => new Date(b.gameStartTime).getTime() - new Date(a.gameStartTime).getTime(),
+        ),
+      ] as const);
   }, [filtered]);
 
   const activeFilterCount = [statusFilter, stadiumFilter, search.trim()].filter(Boolean).length;

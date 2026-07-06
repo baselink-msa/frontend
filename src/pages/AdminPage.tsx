@@ -152,7 +152,7 @@ export function AdminPage() {
       {activeTab === 'lists' ? (
         <TabPanel title="조회 및 API 필요 목록" description="현재 조회 가능한 데이터와 추가로 필요한 백엔드 API를 확인합니다.">
           <div className="grid gap-5 xl:grid-cols-3">
-            <GameListPanel games={gamesQuery.data?.data ?? []} isLoading={gamesQuery.isLoading} />
+            <GameListPanel games={gamesQuery.data?.data ?? []} isLoading={gamesQuery.isLoading} onStatus={handleStatus} />
             <MenuListPanel menus={menusQuery.data?.data ?? []} isLoading={menusQuery.isLoading} />
             <FaqListPanel faqs={faqsQuery.data?.data ?? []} isLoading={faqsQuery.isLoading} />
           </div>
@@ -663,11 +663,24 @@ function FaqCreatePanel({ onStatus }: { onStatus: (status: FormStatus) => void }
   );
 }
 
-function GameListPanel({ games, isLoading }: { games: GameSummary[]; isLoading: boolean }) {
+function GameListPanel({
+  games,
+  isLoading,
+  onStatus,
+}: {
+  games: GameSummary[];
+  isLoading: boolean;
+  onStatus: (status: FormStatus) => void;
+}) {
   const queryClient = useQueryClient();
   const deleteMutation = useMutation({
     mutationFn: (gameId: number) => adminApi.deleteGame(gameId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin'] });
+      queryClient.invalidateQueries({ queryKey: ['games'] });
+      onStatus({ success: '경기가 삭제되었습니다.' });
+    },
+    onError: (err) => onStatus({ error: err.message ?? '경기 삭제에 실패했습니다.' }),
   });
 
   return (
