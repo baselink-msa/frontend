@@ -9,22 +9,19 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { GameCard } from '../components/games/GameCard';
 import type { GameStatus, GameSummary } from '../types/game';
 import { formatDateTime } from '../utils/date';
+import { getEffectiveGameStatus } from '../utils/gameStatus';
 
 const statusLabels: Record<GameStatus, string> = {
   SCHEDULED: '예정',
   TICKET_OPEN: '예매중',
   SOLD_OUT: '매진',
   CLOSED: '종료',
+  FINISHED: '종료',
+  CANCELED: '취소',
 };
+const statusFilterOptions: GameStatus[] = ['SCHEDULED', 'TICKET_OPEN', 'SOLD_OUT', 'CLOSED', 'CANCELED'];
 
 type ViewMode = 'grid' | 'list' | 'date';
-
-const getEffectiveStatus = (game: GameSummary): GameStatus =>
-  new Date(game.gameStartTime).getTime() <= Date.now()
-    ? 'CLOSED'
-    : game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
-    ? 'TICKET_OPEN'
-    : game.status;
 
 export function GameListPage() {
   const { data, isLoading, error } = useQuery({
@@ -48,7 +45,7 @@ export function GameListPage() {
     let result: GameSummary[] = games;
 
     if (statusFilter) {
-      result = result.filter((g) => getEffectiveStatus(g) === statusFilter);
+      result = result.filter((g) => getEffectiveGameStatus(g) === statusFilter);
     }
     if (stadiumFilter) {
       result = result.filter((g) => g.stadiumName === stadiumFilter);
@@ -148,8 +145,8 @@ export function GameListPage() {
             className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
           >
             <option value="">전체 상태</option>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
+            {statusFilterOptions.map((status) => (
+              <option key={status} value={status}>{statusLabels[status]}</option>
             ))}
           </select>
 
@@ -230,7 +227,7 @@ export function GameListPage() {
 }
 
 function GameListItem({ game }: { game: GameSummary }) {
-  const effectiveStatus = getEffectiveStatus(game);
+  const effectiveStatus = getEffectiveGameStatus(game);
 
   return (
     <Link

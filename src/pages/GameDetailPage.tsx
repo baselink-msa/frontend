@@ -9,6 +9,7 @@ import { StatusBadge } from '../components/common/StatusBadge';
 import { useReservationStore } from '../store/reservationStore';
 import { formatDateTime } from '../utils/date';
 import { createClientRequestId } from '../utils/format';
+import { getEffectiveGameStatus, isGamePast } from '../utils/gameStatus';
 
 export function GameDetailPage() {
   const { gameId = '0' } = useParams();
@@ -45,16 +46,10 @@ export function GameDetailPage() {
   if (!game) return <ErrorMessage message={queryError?.message ?? '경기 정보를 찾을 수 없습니다.'} />;
 
   const ticketOpenTime = new Date(game.ticketOpenTime).getTime();
-  const gameStartTime = new Date(game.gameStartTime).getTime();
   const remainingMs = Math.max(ticketOpenTime - now, 0);
-  const isGamePast = gameStartTime <= now;
-  const effectiveStatus =
-    isGamePast
-      ? 'CLOSED'
-      : game.status === 'SCHEDULED' && remainingMs === 0
-      ? 'TICKET_OPEN'
-      : game.status;
-  const isTicketOpen = !isGamePast && effectiveStatus === 'TICKET_OPEN';
+  const gamePast = isGamePast(game, now);
+  const effectiveStatus = getEffectiveGameStatus(game, now);
+  const isTicketOpen = effectiveStatus === 'TICKET_OPEN';
   const countdown = formatCountdown(remainingMs);
 
   return (
@@ -84,23 +79,23 @@ export function GameDetailPage() {
             disabled={enterMutation.isPending || !isTicketOpen}
             className="w-full rounded-md bg-blue-700 px-5 py-3 text-base font-bold text-white hover:bg-blue-800 disabled:opacity-60 sm:w-auto"
           >
-            {enterMutation.isPending ? '대기열 입장 중' : isTicketOpen ? '예매하기' : isGamePast ? '예매 종료' : '예매 오픈 전'}
+            {enterMutation.isPending ? '대기열 입장 중' : isTicketOpen ? '예매하기' : gamePast ? '예매 종료' : '예매 오픈 전'}
           </button>
         </div>
       </div>
       <aside className="rounded-lg border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-bold text-slate-950">티켓 오픈</h2>
         <p className="mt-2 text-sm text-slate-600">{formatDateTime(game.ticketOpenTime)}</p>
-        <div className={`mt-5 rounded-lg p-5 text-center ${isTicketOpen ? 'bg-green-50' : isGamePast ? 'bg-slate-100' : 'bg-amber-50'}`}>
-          <p className={`text-sm font-bold ${isTicketOpen ? 'text-green-700' : isGamePast ? 'text-slate-600' : 'text-amber-700'}`}>
-            {isTicketOpen ? '예매 가능' : isGamePast ? '예매 종료' : '예매 오픈까지'}
+        <div className={`mt-5 rounded-lg p-5 text-center ${isTicketOpen ? 'bg-green-50' : gamePast ? 'bg-slate-100' : 'bg-amber-50'}`}>
+          <p className={`text-sm font-bold ${isTicketOpen ? 'text-green-700' : gamePast ? 'text-slate-600' : 'text-amber-700'}`}>
+            {isTicketOpen ? '예매 가능' : gamePast ? '예매 종료' : '예매 오픈까지'}
           </p>
-          <p className={`mt-2 text-3xl font-black ${isTicketOpen ? 'text-green-800' : isGamePast ? 'text-slate-700' : 'text-amber-800'}`}>
-            {isTicketOpen ? 'OPEN' : isGamePast ? 'CLOSED' : countdown}
+          <p className={`mt-2 text-3xl font-black ${isTicketOpen ? 'text-green-800' : gamePast ? 'text-slate-700' : 'text-amber-800'}`}>
+            {isTicketOpen ? 'OPEN' : gamePast ? 'CLOSED' : countdown}
           </p>
         </div>
         <p className="mt-4 text-sm leading-6 text-slate-600">
-          {isGamePast
+          {gamePast
             ? '경기 시작 시간이 지난 경기는 예매할 수 없습니다.'
             : '티켓 오픈 시간이 지나면 예매 버튼이 자동으로 활성화됩니다.'}
         </p>
