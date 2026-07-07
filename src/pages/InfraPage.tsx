@@ -4,6 +4,7 @@ const GRAFANA_BASE = '/grafana';
 
 const dashboards = [
   { id: 'e2e-business', label: 'E2E & Business', uid: 'baselink-e2e-business' },
+  { id: 'loadtest', label: 'Load Test', uid: 'baselink-loadtest' },
   { id: 'app-api', label: 'Application & API', uid: 'baselink-app-api' },
   { id: 'db-mq', label: 'DB & Message Queue', uid: 'baselink-db-mq' },
   { id: 'autoscaling', label: 'Autoscaling & K8s', uid: 'baselink-autoscaling-k8s' },
