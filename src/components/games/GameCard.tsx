@@ -2,6 +2,7 @@ import { CalendarDays, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { GameSummary } from '../../types/game';
 import { formatDateTime } from '../../utils/date';
+import { getEffectiveGameStatus } from '../../utils/gameStatus';
 import { StatusBadge } from '../common/StatusBadge';
 
 type GameCardProps = {
@@ -9,11 +10,7 @@ type GameCardProps = {
 };
 
 export function GameCard({ game }: GameCardProps) {
-  // 예매 오픈 시간이 지났으면 프론트에서 상태를 보정
-  const effectiveStatus =
-    game.status === 'SCHEDULED' && new Date(game.ticketOpenTime).getTime() <= Date.now()
-      ? 'TICKET_OPEN'
-      : game.status;
+  const effectiveStatus = getEffectiveGameStatus(game);
 
   return (
     <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-soft">

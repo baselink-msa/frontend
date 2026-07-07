@@ -1,4 +1,4 @@
-export type GameStatus = 'SCHEDULED' | 'TICKET_OPEN' | 'SOLD_OUT' | 'CLOSED';
+export type GameStatus = 'SCHEDULED' | 'TICKET_OPEN' | 'SOLD_OUT' | 'CLOSED' | 'FINISHED' | 'CANCELED';
 
 export type Stadium = {
   stadiumId: number;

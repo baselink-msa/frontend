@@ -12,6 +12,7 @@ import { SeatGrid } from '../components/seats/SeatGrid';
 import { useReservationStore } from '../store/reservationStore';
 import type { GameSeat } from '../types/seat';
 import { formatCurrency } from '../utils/format';
+import { isGamePast, isGameTicketOpen } from '../utils/gameStatus';
 
 export function SeatSelectionPage() {
   const { gameId = '0' } = useParams();
@@ -128,8 +129,8 @@ export function SeatSelectionPage() {
   if (gameQuery.isLoading) return <Loading label="경기 정보를 확인하는 중입니다." />;
 
   const game = gameQuery.data?.data;
-  const ticketOpenTime = game ? new Date(game.ticketOpenTime).getTime() : 0;
-  const isTicketOpen = game ? game.status === 'TICKET_OPEN' || ticketOpenTime <= Date.now() : false;
+  const gamePast = game ? isGamePast(game) : false;
+  const isTicketOpen = game ? isGameTicketOpen(game) : false;
   const hasSeatAccess = Boolean(hasScopedTicketAccess || changeReservationId);
 
   if (!game) {
@@ -139,8 +140,12 @@ export function SeatSelectionPage() {
   if (!isTicketOpen) {
     return (
       <BlockedSeatAccess
-        title="아직 예매 오픈 전입니다."
-        description={`예매 오픈: ${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' }).format(new Date(game.ticketOpenTime))}`}
+        title={gamePast ? '예매가 종료된 경기입니다.' : '아직 예매 오픈 전입니다.'}
+        description={
+          gamePast
+            ? '경기 시작 시간이 지난 경기는 좌석을 선택할 수 없습니다.'
+            : `예매 오픈: ${new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' }).format(new Date(game.ticketOpenTime))}`
+        }
         to={`/games/${numericGameId}`}
         label="경기 상세로"
       />
